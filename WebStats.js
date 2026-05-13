@@ -277,6 +277,10 @@ function processLine(line) {
     if (!match) return false;
 
     const [, timestamp, ip, concurrent, location, isp] = match;
+
+    // Ignore localhost connections
+    if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return false;
+
     const date = parseTimestamp(timestamp);
     const dateKey = getDateKey(date);
     const hour = date.getHours();
@@ -377,8 +381,9 @@ function processLogFile() {
 
         const content = fs.readFileSync(LOG_FILE, 'utf8');
         const lines = content.split('\n');
-        const lastTs = statsData._last_timestamp || null;
-        let latestTs = lastTs;
+        // _last_timestamp is stored as epoch ms for reliable comparison
+        const lastEpoch = statsData._last_timestamp || 0;
+        let latestEpoch = lastEpoch;
         let processed = 0;
 
         lines.forEach(line => {
@@ -389,28 +394,29 @@ function processLogFile() {
             const tsMatch = line.match(/^\[([^\]]+)\]/);
             if (!tsMatch) return;
 
-            const lineTs = tsMatch[1];
+            const lineDate = parseTimestamp(tsMatch[1]);
+            const lineEpoch = lineDate.getTime();
 
-            // Skip lines we've already processed (timestamp <= last processed)
-            if (lastTs && lineTs <= lastTs) return;
+            // Skip lines we've already processed
+            if (lineEpoch <= lastEpoch) return;
 
             if (processLine(line)) {
                 processed++;
-                if (!latestTs || lineTs > latestTs) latestTs = lineTs;
+                if (lineEpoch > latestEpoch) latestEpoch = lineEpoch;
             } else if (processDisconnectLine(line)) {
                 processed++;
-                if (!latestTs || lineTs > latestTs) latestTs = lineTs;
+                if (lineEpoch > latestEpoch) latestEpoch = lineEpoch;
             }
         });
 
-        if (latestTs !== lastTs) {
-            statsData._last_timestamp = latestTs;
+        if (latestEpoch !== lastEpoch) {
+            statsData._last_timestamp = latestEpoch;
         }
 
         if (processed > 0) {
             saveData();
             saveAdminData();
-            logMsg('Processed ' + processed + ' new connection(s), last timestamp: ' + latestTs);
+            logMsg('Processed ' + processed + ' new connection(s)');
         }
     } catch (err) {
         logMsg('Error processing log file: ' + err.message);
