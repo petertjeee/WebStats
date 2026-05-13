@@ -1333,7 +1333,8 @@
                     ? `rgba(${r}, ${g}, ${b}, ${0.3 + intensity * 0.7})`
                     : 'var(--color-1)';
                 const text = val > 0 ? val : '';
-                html += `<div class="ws-heatmap-cell" style="background:${bg}" title="${getDayName(dow)} ${h}:00 — ${val} visitors">${text}</div>`;
+                const textColor = intensity > 0.6 ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.7)';
+                html += `<div class="ws-heatmap-cell" style="background:${bg};color:${textColor}" title="${getDayName(dow)} ${h}:00 — ${val} visitors">${text}</div>`;
             }
         });
 
