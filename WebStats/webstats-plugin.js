@@ -863,12 +863,20 @@
 
     // ========== Create Button ==========
     function createButton() {
-        // New fm-dx-webserver (v2+) with plugin panel
+        // New fm-dx-webserver with plugin panel (.dashboard-panel-plugin-list)
+        // Use MutationObserver to wait for addIconToPluginPanel to become available
         if (document.querySelector('.dashboard-panel-plugin-list')) {
             if (typeof addIconToPluginPanel === 'function') {
-                addIconToPluginPanel('webstats-btn', 'WebStats', 'solid', 'chart-simple', 'Visitor Statistics');
-                const btn = document.getElementById('webstats-btn');
-                if (btn) btn.addEventListener('click', openModal);
+                addPluginButton();
+            } else {
+                const observer = new MutationObserver(() => {
+                    if (typeof addIconToPluginPanel === 'function') {
+                        observer.disconnect();
+                        addPluginButton();
+                    }
+                });
+                observer.observe(document.body, { childList: true, subtree: true });
+                setTimeout(() => observer.disconnect(), 30000);
             }
             return;
         }
@@ -901,6 +909,12 @@
             btn.style.zIndex = '9999';
             document.body.appendChild(btn);
         }
+    }
+
+    function addPluginButton() {
+        addIconToPluginPanel('webstats-btn', 'WebStats', 'solid', 'chart-simple', 'Visitor Statistics');
+        const btn = document.getElementById('webstats-btn');
+        if (btn) btn.addEventListener('click', openModal);
     }
 
     // ========== Create Modal ==========
