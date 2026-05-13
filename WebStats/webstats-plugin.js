@@ -109,31 +109,19 @@
     function injectStyles() {
         const style = document.createElement('style');
         style.textContent = `
-            /* WebStats Button */
+            /* WebStats Button (legacy mode) */
             #webstats-btn {
-                background: #0f3460;
-                color: #e0e0e0;
-                border: 1px solid rgba(255,255,255,0.15);
-                border-radius: 5px;
-                padding: 5px 12px;
-                font-size: 12px;
-                font-weight: 600;
-                cursor: pointer;
-                letter-spacing: 0.5px;
-                transition: background 0.2s, border-color 0.2s;
-                font-family: inherit;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
+                border-radius: 0px;
+                width: 100px;
+                height: 22px;
+                position: relative;
+                margin-top: 16px;
+                margin-left: 5px;
+                right: 0px;
             }
             #webstats-btn:hover {
-                background: #1a5276;
-                border-color: rgba(255,255,255,0.3);
-            }
-            #webstats-btn svg {
-                width: 14px;
-                height: 14px;
-                fill: currentColor;
+                color: var(--color-5);
+                filter: brightness(120%);
             }
 
             /* Modal Overlay */
@@ -155,15 +143,15 @@
 
             /* Modal Container */
             #webstats-modal {
-                background: #1a1a2e;
+                background: var(--color-1);
                 border-radius: 12px;
                 width: 100%;
                 max-width: 960px;
                 margin: 10px auto;
                 box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-                border: 1px solid rgba(255,255,255,0.08);
-                color: #e0e0e0;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                border: 1px solid var(--color-2);
+                color: var(--color-text);
+                font-family: 'Titillium Web', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 font-size: 14px;
             }
 
@@ -173,7 +161,7 @@
                 align-items: center;
                 justify-content: space-between;
                 padding: 16px 24px;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 1px solid var(--color-2);
                 flex-wrap: wrap;
                 gap: 10px;
             }
@@ -181,7 +169,7 @@
                 margin: 0;
                 font-size: 20px;
                 font-weight: 700;
-                color: #fff;
+                color: var(--color-text);
             }
             .ws-header-controls {
                 display: flex;
@@ -189,9 +177,9 @@
                 gap: 10px;
             }
             .ws-select {
-                background: #16213e;
-                color: #e0e0e0;
-                border: 1px solid rgba(255,255,255,0.15);
+                background: var(--color-2);
+                color: var(--color-text);
+                border: 1px solid var(--color-3);
                 border-radius: 6px;
                 padding: 6px 10px;
                 font-size: 13px;
@@ -200,12 +188,12 @@
             }
             .ws-select:focus {
                 outline: none;
-                border-color: #00b894;
+                border-color: var(--color-main-bright);
             }
             .ws-close {
                 background: none;
                 border: none;
-                color: #888;
+                color: var(--color-3);
                 font-size: 24px;
                 cursor: pointer;
                 padding: 0 4px;
@@ -229,42 +217,42 @@
                 margin-bottom: 24px;
             }
             .ws-card {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 16px;
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid var(--color-2);
             }
             .ws-card-label {
                 font-size: 11px;
                 text-transform: uppercase;
                 letter-spacing: 1px;
-                color: #888;
+                color: var(--color-3);
                 margin-bottom: 6px;
             }
             .ws-card-value {
                 font-size: 28px;
                 font-weight: 700;
-                color: #fff;
+                color: var(--color-text);
             }
             .ws-card-sub {
                 font-size: 11px;
-                color: #666;
+                color: var(--color-3);
                 margin-top: 4px;
             }
 
             /* Chart Section */
             .ws-chart-container {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 20px;
                 margin-bottom: 24px;
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid var(--color-2);
             }
             .ws-chart-container h3 {
                 margin: 0 0 16px 0;
                 font-size: 15px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
             }
             .ws-chart-container canvas {
                 max-height: 250px;
@@ -283,16 +271,16 @@
                 }
             }
             .ws-table-box {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 16px;
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid var(--color-2);
             }
             .ws-table-box h3 {
                 margin: 0 0 12px 0;
                 font-size: 14px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
             }
             .ws-table {
                 width: 100%;
@@ -303,9 +291,9 @@
                 font-size: 11px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                color: #666;
+                color: var(--color-3);
                 padding: 6px 8px;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 1px solid var(--color-2);
             }
             .ws-table th:last-child {
                 text-align: right;
@@ -313,35 +301,35 @@
             .ws-table td {
                 padding: 7px 8px;
                 font-size: 13px;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
+                border-bottom: 1px solid var(--color-1);
             }
             .ws-table td:last-child {
                 text-align: right;
                 font-weight: 600;
-                color: #00b894;
+                color: var(--color-main-bright);
             }
             .ws-table tr:last-child td {
                 border-bottom: none;
             }
             .ws-table .ws-rank {
-                color: #666;
+                color: var(--color-3);
                 font-size: 12px;
                 width: 28px;
             }
 
             /* Daily Breakdown */
             .ws-daily-box {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 16px;
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid var(--color-2);
                 margin-bottom: 24px;
             }
             .ws-daily-box h3 {
                 margin: 0 0 12px 0;
                 font-size: 14px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
             }
             .ws-daily-table {
                 width: 100%;
@@ -352,14 +340,14 @@
                 font-size: 11px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                color: #666;
+                color: var(--color-3);
                 padding: 8px;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 1px solid var(--color-2);
             }
             .ws-daily-table td {
                 padding: 8px;
                 font-size: 13px;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
+                border-bottom: 1px solid var(--color-1);
             }
             .ws-daily-table tr:last-child td {
                 border-bottom: none;
@@ -369,29 +357,29 @@
                 transition: background 0.15s;
             }
             .ws-daily-table tr.ws-clickable:hover td {
-                background: rgba(0, 184, 148, 0.08);
+                background: var(--color-1-transparent);
             }
             .ws-daily-table tr.ws-selected td {
-                background: rgba(0, 184, 148, 0.15);
+                background: var(--color-2-transparent);
             }
             .ws-daily-table .ws-highlight {
-                color: #00b894;
+                color: var(--color-main-bright);
                 font-weight: 600;
             }
 
             /* Hourly Detail */
             .ws-hourly-detail {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 20px;
                 margin-bottom: 24px;
-                border: 1px solid rgba(0, 184, 148, 0.2);
+                border: 1px solid var(--color-3);
             }
             .ws-hourly-detail h3 {
                 margin: 0 0 16px 0;
                 font-size: 15px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
@@ -402,7 +390,7 @@
             .ws-hourly-close {
                 background: none;
                 border: none;
-                color: #888;
+                color: var(--color-3);
                 font-size: 18px;
                 cursor: pointer;
                 padding: 0 4px;
@@ -414,17 +402,17 @@
 
             /* Heatmap */
             .ws-heatmap-box {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 20px;
                 margin-bottom: 24px;
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid var(--color-2);
             }
             .ws-heatmap-box h3 {
                 margin: 0 0 16px 0;
                 font-size: 15px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
             }
             .ws-heatmap {
                 display: grid;
@@ -433,7 +421,7 @@
                 font-size: 11px;
             }
             .ws-heatmap-label {
-                color: #888;
+                color: var(--color-3);
                 display: flex;
                 align-items: center;
                 padding-right: 6px;
@@ -441,7 +429,7 @@
                 font-size: 11px;
             }
             .ws-heatmap-hour {
-                color: #666;
+                color: var(--color-3);
                 text-align: center;
                 font-size: 10px;
                 padding-bottom: 4px;
@@ -463,17 +451,17 @@
 
             /* Comparison */
             .ws-comparison-box {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 20px;
                 margin-bottom: 24px;
-                border: 1px solid rgba(255,255,255,0.06);
+                border: 1px solid var(--color-2);
             }
             .ws-comparison-box h3 {
                 margin: 0 0 16px 0;
                 font-size: 15px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
             }
             .ws-comparison-grid {
                 display: grid;
@@ -493,12 +481,12 @@
             .ws-comp-item {
                 text-align: center;
                 padding: 12px;
-                background: rgba(255,255,255,0.02);
+                background: var(--color-1);
                 border-radius: 8px;
             }
             .ws-comp-label {
                 font-size: 11px;
-                color: #888;
+                color: var(--color-3);
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
                 margin-bottom: 8px;
@@ -512,11 +500,11 @@
             .ws-comp-current {
                 font-size: 22px;
                 font-weight: 700;
-                color: #fff;
+                color: var(--color-text);
             }
             .ws-comp-prev {
                 font-size: 14px;
-                color: #666;
+                color: var(--color-3);
             }
             .ws-comp-change {
                 font-size: 12px;
@@ -525,16 +513,16 @@
                 border-radius: 10px;
             }
             .ws-comp-up {
-                color: #00b894;
-                background: rgba(0, 184, 148, 0.12);
+                color: var(--color-main-bright);
+                background: var(--color-1-transparent);
             }
             .ws-comp-down {
                 color: #e74c3c;
                 background: rgba(231, 76, 60, 0.12);
             }
             .ws-comp-neutral {
-                color: #888;
-                background: rgba(255,255,255,0.05);
+                color: var(--color-3);
+                background: var(--color-1);
             }
 
             /* Admin Section */
@@ -557,7 +545,7 @@
                 vertical-align: middle;
             }
             .ws-admin-box {
-                background: #16213e;
+                background: var(--color-2);
                 border-radius: 10px;
                 padding: 16px;
                 border: 1px solid rgba(231, 76, 60, 0.15);
@@ -567,7 +555,7 @@
                 margin: 0 0 12px 0;
                 font-size: 14px;
                 font-weight: 600;
-                color: #ccc;
+                color: var(--color-4);
             }
             .ws-ip-table {
                 width: 100%;
@@ -578,14 +566,14 @@
                 font-size: 11px;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
-                color: #666;
+                color: var(--color-3);
                 padding: 6px 8px;
-                border-bottom: 1px solid rgba(255,255,255,0.08);
+                border-bottom: 1px solid var(--color-2);
             }
             .ws-ip-table td {
                 padding: 6px 8px;
                 font-size: 12px;
-                border-bottom: 1px solid rgba(255,255,255,0.04);
+                border-bottom: 1px solid var(--color-1);
                 font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
             }
             .ws-ip-table td.ws-ip-name {
@@ -597,15 +585,15 @@
             .ws-ip-table .ws-ip-count {
                 text-align: right;
                 font-weight: 600;
-                color: #e17055;
+                color: var(--color-main-bright);
                 font-family: inherit;
             }
 
             /* Update toast */
             .ws-update-badge {
                 display: inline-block;
-                background: #e17055;
-                color: #fff;
+                background: var(--color-4);
+                color: var(--color-main);
                 font-size: 10px;
                 padding: 2px 6px;
                 border-radius: 8px;
@@ -621,17 +609,17 @@
             /* Footer */
             .ws-footer {
                 padding: 12px 24px;
-                border-top: 1px solid rgba(255,255,255,0.08);
+                border-top: 1px solid var(--color-2);
                 text-align: center;
                 font-size: 11px;
-                color: #555;
+                color: var(--color-3);
             }
 
             /* Loading & Error */
             .ws-loading {
                 text-align: center;
                 padding: 40px;
-                color: #888;
+                color: var(--color-3);
             }
             .ws-error {
                 text-align: center;
@@ -641,7 +629,7 @@
             .ws-empty {
                 text-align: center;
                 padding: 20px;
-                color: #666;
+                color: var(--color-3);
                 font-style: italic;
             }
         `;
@@ -743,6 +731,24 @@
         const s = seconds % 60;
         if (h > 0) return h + 'h ' + m + 'm';
         return m + 'm ' + s + 's';
+    }
+
+    // ========== Theme Color Helper ==========
+    function getThemeColor(varName, fallback) {
+        const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        return val || fallback || '#888';
+    }
+
+    function getThemeColorRgb(varName) {
+        const el = document.createElement('div');
+        el.style.color = `var(${varName})`;
+        el.style.display = 'none';
+        document.body.appendChild(el);
+        const computed = getComputedStyle(el).color;
+        document.body.removeChild(el);
+        const match = computed.match(/(\d+),\s*(\d+),\s*(\d+)/);
+        if (match) return { r: parseInt(match[1]), g: parseInt(match[2]), b: parseInt(match[3]) };
+        return { r: 0, g: 184, b: 148 };
     }
 
     // ========== Statistics Calculation ==========
@@ -857,29 +863,38 @@
 
     // ========== Create Button ==========
     function createButton() {
+        // New fm-dx-webserver (v2+) with plugin panel
+        if (document.querySelector('.dashboard-panel-plugin-list')) {
+            if (typeof addIconToPluginPanel === 'function') {
+                addIconToPluginPanel('webstats-btn', 'WebStats', 'solid', 'chart-simple', 'Visitor Statistics');
+                const btn = document.getElementById('webstats-btn');
+                if (btn) btn.addEventListener('click', openModal);
+            }
+            return;
+        }
+
+        // Legacy fm-dx-webserver: add button to #button-wrapper or create it inside .tuner-info
         const btn = document.createElement('button');
         btn.id = 'webstats-btn';
-        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M3 3v18h18v-2H5V3H3zm4 12h2V9H7v6zm4 0h2V5h-2v10zm4 0h2V7h-2v8z"/></svg> WEBSTATS`;
+        btn.className = 'hide-phone bg-color-2';
+        btn.innerHTML = '<strong>WEBSTATS</strong>';
         btn.title = 'Visitor Statistics';
         btn.addEventListener('click', openModal);
 
-        const containers = [
-            document.querySelector('.button-wrapper'),
-            document.querySelector('#button-wrapper'),
-            document.querySelector('.panel-100'),
-            document.querySelector('.hide-phone')
-        ];
-
-        let inserted = false;
-        for (const container of containers) {
-            if (container) {
-                container.appendChild(btn);
-                inserted = true;
-                break;
+        let buttonWrapper = document.getElementById('button-wrapper');
+        if (!buttonWrapper) {
+            const tunerInfo = document.querySelector('.tuner-info');
+            if (tunerInfo) {
+                buttonWrapper = document.createElement('div');
+                buttonWrapper.id = 'button-wrapper';
+                buttonWrapper.className = 'button-wrapper';
+                tunerInfo.appendChild(buttonWrapper);
             }
         }
 
-        if (!inserted) {
+        if (buttonWrapper) {
+            buttonWrapper.appendChild(btn);
+        } else {
             btn.style.position = 'fixed';
             btn.style.bottom = '10px';
             btn.style.right = '10px';
@@ -901,7 +916,7 @@
         overlay.innerHTML = `
             <div id="webstats-modal">
                 <div class="ws-header">
-                    <h2>WebStats${adminBadge} <span style="font-size:11px;color:#666;font-weight:400">v${PLUGIN_VERSION}</span></h2>
+                    <h2>WebStats${adminBadge} <span style="font-size:11px;color:var(--color-3);font-weight:400">v${PLUGIN_VERSION}</span></h2>
                     <div class="ws-header-controls">
                         <select id="ws-year-select" class="ws-select"></select>
                         <select id="ws-month-select" class="ws-select"></select>
@@ -1070,7 +1085,7 @@
             <!-- Daily Breakdown -->
             <div class="ws-daily-box">
                 <h3>Daily overview — ${getMonthName(selectedMonth)} ${selectedYear}</h3>
-                <div style="font-size:11px;color:#666;margin-bottom:10px;">Click a day for hourly breakdown</div>
+                <div style="font-size:11px;color:var(--color-3);margin-bottom:10px;">Click a day for hourly breakdown</div>
                 ${renderDailyTable(stats.monthDays)}
             </div>
 
@@ -1233,8 +1248,8 @@
                 datasets: [{
                     label: 'Visitors',
                     data: hourlyData,
-                    backgroundColor: 'rgba(0, 184, 148, 0.7)',
-                    borderColor: 'rgba(0, 184, 148, 1)',
+                    backgroundColor: (() => { const c = getThemeColorRgb('--color-main-bright'); return `rgba(${c.r},${c.g},${c.b},0.7)`; })(),
+                    borderColor: (() => { const c = getThemeColorRgb('--color-main-bright'); return `rgba(${c.r},${c.g},${c.b},1)`; })(),
                     borderWidth: 1,
                     borderRadius: 3
                 }]
@@ -1245,22 +1260,22 @@
                 plugins: {
                     legend: { display: false },
                     tooltip: {
-                        backgroundColor: '#16213e',
-                        titleColor: '#fff',
-                        bodyColor: '#e0e0e0',
-                        borderColor: 'rgba(255,255,255,0.1)',
+                        backgroundColor: getThemeColor('--color-2'),
+                        titleColor: getThemeColor('--color-text'),
+                        bodyColor: getThemeColor('--color-text'),
+                        borderColor: getThemeColor('--color-3'),
                         borderWidth: 1
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#888', font: { size: 10 } },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        ticks: { color: getThemeColor('--color-3'), font: { size: 10 } },
+                        grid: { color: getThemeColor('--color-1') }
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: { color: '#888', precision: 0 },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        ticks: { color: getThemeColor('--color-3'), precision: 0 },
+                        grid: { color: getThemeColor('--color-1') }
                     }
                 }
             }
@@ -1295,12 +1310,13 @@
             for (let h = 0; h < 24; h++) {
                 const val = heatmap[dow][h];
                 const intensity = val / maxVal;
-                const r = Math.round(0 + intensity * 0);
-                const g = Math.round(40 + intensity * 144);
-                const b = Math.round(60 + intensity * 88);
+                const tc = getThemeColorRgb('--color-main-bright');
+                const r = Math.round(tc.r * intensity);
+                const g = Math.round(tc.g * intensity);
+                const b = Math.round(tc.b * intensity);
                 const bg = val > 0
                     ? `rgba(${r}, ${g}, ${b}, ${0.3 + intensity * 0.7})`
-                    : 'rgba(255,255,255,0.02)';
+                    : 'var(--color-1)';
                 const text = val > 0 ? val : '';
                 html += `<div class="ws-heatmap-cell" style="background:${bg}" title="${getDayName(dow)} ${h}:00 — ${val} visitors">${text}</div>`;
             }
@@ -1383,16 +1399,16 @@
                     {
                         label: 'Visitors',
                         data: stats.monthlyTotals,
-                        backgroundColor: 'rgba(0, 184, 148, 0.7)',
-                        borderColor: 'rgba(0, 184, 148, 1)',
+                        backgroundColor: (() => { const c = getThemeColorRgb('--color-main-bright'); return `rgba(${c.r},${c.g},${c.b},0.7)`; })(),
+                        borderColor: (() => { const c = getThemeColorRgb('--color-main-bright'); return `rgba(${c.r},${c.g},${c.b},1)`; })(),
                         borderWidth: 1,
                         borderRadius: 4
                     },
                     {
                         label: 'Unique',
                         data: stats.monthlyUniques,
-                        backgroundColor: 'rgba(116, 185, 255, 0.5)',
-                        borderColor: 'rgba(116, 185, 255, 1)',
+                        backgroundColor: (() => { const c = getThemeColorRgb('--color-4'); return `rgba(${c.r},${c.g},${c.b},0.5)`; })(),
+                        borderColor: (() => { const c = getThemeColorRgb('--color-4'); return `rgba(${c.r},${c.g},${c.b},1)`; })(),
                         borderWidth: 1,
                         borderRadius: 4
                     }
@@ -1403,25 +1419,25 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        labels: { color: '#aaa', font: { size: 12 } }
+                        labels: { color: getThemeColor('--color-3'), font: { size: 12 } }
                     },
                     tooltip: {
-                        backgroundColor: '#16213e',
-                        titleColor: '#fff',
-                        bodyColor: '#e0e0e0',
-                        borderColor: 'rgba(255,255,255,0.1)',
+                        backgroundColor: getThemeColor('--color-2'),
+                        titleColor: getThemeColor('--color-text'),
+                        bodyColor: getThemeColor('--color-text'),
+                        borderColor: getThemeColor('--color-3'),
                         borderWidth: 1
                     }
                 },
                 scales: {
                     x: {
-                        ticks: { color: '#888' },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        ticks: { color: getThemeColor('--color-3') },
+                        grid: { color: getThemeColor('--color-1') }
                     },
                     y: {
                         beginAtZero: true,
-                        ticks: { color: '#888', precision: 0 },
-                        grid: { color: 'rgba(255,255,255,0.05)' }
+                        ticks: { color: getThemeColor('--color-3'), precision: 0 },
+                        grid: { color: getThemeColor('--color-1') }
                     }
                 }
             }
@@ -1599,6 +1615,31 @@
         }
     });
 
+    // ========== Theme Change Observer ==========
+    function observeThemeChanges() {
+        let lastBright = '';
+
+        function checkTheme() {
+            const bright = getComputedStyle(document.documentElement).getPropertyValue('--color-main-bright').trim();
+            if (bright && bright !== lastBright) {
+                lastBright = bright;
+                if (modalOpen && statsData) {
+                    const content = document.getElementById('ws-content');
+                    if (content) {
+                        const stats = calcStats(statsData.days || {});
+                        renderDashboard(content, stats);
+                    }
+                }
+            }
+        }
+
+        const observer = new MutationObserver(() => checkTheme());
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'class'] });
+
+        // Also poll periodically in case theme is applied via JS without attribute change
+        setInterval(checkTheme, 2000);
+    }
+
     // ========== Initialize ==========
     async function init() {
         detectAdmin();
@@ -1614,6 +1655,7 @@
 
         await loadPluginConfig();
         checkForUpdate();
+        observeThemeChanges();
 
         console.log('[WebStats] Frontend plugin v' + PLUGIN_VERSION + ' loaded' + (isAdmin ? ' (admin)' : ''));
     }
