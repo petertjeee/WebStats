@@ -442,7 +442,7 @@
                 align-items: center;
                 justify-content: center;
                 font-size: 10px;
-                color: rgba(255,255,255,0.7);
+                font-weight: 600;
                 transition: transform 0.1s;
             }
             .ws-heatmap-cell:hover {
