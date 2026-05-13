@@ -109,8 +109,9 @@
     function injectStyles() {
         const style = document.createElement('style');
         style.textContent = `
-            /* WebStats Button (legacy mode) */
-            #webstats-btn {
+            /* WebStats Button — legacy mode only (outside plugin panel) */
+            #button-wrapper #webstats-btn,
+            body > #webstats-btn {
                 border-radius: 0px;
                 width: 100px;
                 height: 22px;
