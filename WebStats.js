@@ -66,9 +66,7 @@ let statsData = {
     days: {},
     _current_day: null,
     _current_day_ips: [],
-    _last_offset: 0,
-    _last_size: 0,
-    _last_timestamp: null
+    _last_timestamp: 0
 };
 
 // --- Admin data (IP details, NOT web-accessible) ---
@@ -108,7 +106,7 @@ function loadData() {
         }
     } catch (err) {
         logMsg('Error loading data file, starting fresh: ' + err.message);
-        statsData = { days: {}, _current_day: null, _current_day_ips: [], _last_offset: 0, _last_size: 0 };
+        statsData = { days: {}, _current_day: null, _current_day_ips: [], _last_timestamp: 0 };
     }
 }
 
