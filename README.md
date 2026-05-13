@@ -91,7 +91,7 @@ The plugin monitors `serverlog.txt` for lines matching the pattern:
 [timestamp] [INFO] Web client connected (IP) [N] Location: Place (ISP)
 ```
 
-It tracks the file read position (byte offset) and only processes new lines on each poll cycle. Log rotation is automatically detected when the file size decreases.
+It uses timestamp-based deduplication to track which lines have already been processed, so it handles fm-dx-webserver's log truncation (5000 line limit) correctly without double-counting. Localhost connections (127.0.0.1) are ignored.
 
 ## Version History
 
@@ -101,6 +101,11 @@ It tracks the file read position (byte offset) and only processes new lines on e
 - Compatible button placement for both new (v2+) and legacy fm-dx-webserver
 - English language UI
 - Last 10 visitors table in admin overview (IP, location, ISP, connect time)
+- Fixed admin detection for IP address panel
+- Fixed double-counting: replaced byte-offset tracking with timestamp-based deduplication
+- Handles fm-dx-webserver log truncation (5000 line limit) correctly
+- Localhost connections (127.0.0.1) are excluded from stats
+- Heatmap: improved text readability on bright cells
 
 ### 1.3.0
 - Session duration tracking: average and max time visitors are connected
