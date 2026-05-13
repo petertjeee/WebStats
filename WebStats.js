@@ -67,7 +67,8 @@ let statsData = {
     _current_day: null,
     _current_day_ips: [],
     _last_offset: 0,
-    _last_size: 0
+    _last_size: 0,
+    _last_timestamp: null
 };
 
 // --- Admin data (IP details, NOT web-accessible) ---
@@ -367,82 +368,49 @@ function processDisconnectLine(line) {
 }
 
 // --- Read and process new lines from the log file ---
+// Note: fm-dx-webserver truncates serverlog.txt to 5000 lines every 60s,
+// rewriting the entire file. Byte offsets are unreliable, so we use
+// timestamp-based deduplication: only process lines newer than _last_timestamp.
 function processLogFile() {
     try {
         if (!fs.existsSync(LOG_FILE)) return;
 
-        const stat = fs.statSync(LOG_FILE);
-        const currentSize = stat.size;
-        const lastOffset = statsData._last_offset || 0;
-        const lastSize = statsData._last_size || 0;
-
-        // Detect log rotation (file shrunk)
-        if (currentSize < lastSize) {
-            logMsg('Log file rotated, re-reading from start');
-            statsData._last_offset = 0;
-            // Clear active sessions on rotation
-            Object.keys(activeSessions).forEach(k => delete activeSessions[k]);
-        }
-
-        const offset = statsData._last_offset || 0;
-
-        // Nothing new to read
-        if (currentSize <= offset) return;
-
-        // Read only the new content
-        const fd = fs.openSync(LOG_FILE, 'r');
-        const buffer = Buffer.alloc(currentSize - offset);
-        fs.readSync(fd, buffer, 0, buffer.length, offset);
-        fs.closeSync(fd);
-
-        const newContent = buffer.toString('utf8');
-        const lines = newContent.split('\n');
-
-        // If re-reading from offset 0, clear only the days present in this log
-        // to prevent double-counting while preserving historical data
-        if (offset === 0) {
-            const dateKeysInLog = new Set();
-            lines.forEach(line => {
-                const m = line.match(/^\[([^\]]+)\]\s+\[INFO\]\s+Web client (connected|disconnected)/);
-                if (m) {
-                    try {
-                        const d = parseTimestamp(m[1]);
-                        dateKeysInLog.add(getDateKey(d));
-                    } catch (e) {}
-                }
-            });
-            if (dateKeysInLog.size > 0) {
-                dateKeysInLog.forEach(dk => {
-                    delete statsData.days[dk];
-                    delete adminData.recent_ips[dk];
-                });
-                statsData._current_day = null;
-                statsData._current_day_ips = [];
-                adminData.last_visitors = [];
-                Object.keys(activeSessions).forEach(k => delete activeSessions[k]);
-                logMsg('Re-reading from start: cleared ' + dateKeysInLog.size + ' day(s) to avoid double-counting');
-            }
-        }
-
+        const content = fs.readFileSync(LOG_FILE, 'utf8');
+        const lines = content.split('\n');
+        const lastTs = statsData._last_timestamp || null;
+        let latestTs = lastTs;
         let processed = 0;
 
         lines.forEach(line => {
             line = line.trim();
             if (!line) return;
+
+            // Extract timestamp from log line to check if we already processed it
+            const tsMatch = line.match(/^\[([^\]]+)\]/);
+            if (!tsMatch) return;
+
+            const lineTs = tsMatch[1];
+
+            // Skip lines we've already processed (timestamp <= last processed)
+            if (lastTs && lineTs <= lastTs) return;
+
             if (processLine(line)) {
                 processed++;
+                if (!latestTs || lineTs > latestTs) latestTs = lineTs;
             } else if (processDisconnectLine(line)) {
                 processed++;
+                if (!latestTs || lineTs > latestTs) latestTs = lineTs;
             }
         });
 
-        statsData._last_offset = currentSize;
-        statsData._last_size = currentSize;
+        if (latestTs !== lastTs) {
+            statsData._last_timestamp = latestTs;
+        }
 
         if (processed > 0) {
             saveData();
             saveAdminData();
-            logMsg('Processed ' + processed + ' new connection(s)');
+            logMsg('Processed ' + processed + ' new connection(s), last timestamp: ' + latestTs);
         }
     } catch (err) {
         logMsg('Error processing log file: ' + err.message);
