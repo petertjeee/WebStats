@@ -389,6 +389,19 @@ function processLogFile() {
         // Nothing new to read
         if (currentSize <= offset) return;
 
+        // If reading from the beginning, clear existing stats to avoid double-counting
+        const isFullReread = (offset === 0);
+        if (isFullReread) {
+            logMsg('Full log re-read: clearing existing day data to avoid double-counting');
+            statsData.days = {};
+            statsData._current_day = null;
+            statsData._current_day_ips = [];
+            adminData.recent_ips = {};
+            adminData.top_ips = {};
+            adminData.last_visitors = [];
+            Object.keys(activeSessions).forEach(k => delete activeSessions[k]);
+        }
+
         // Read only the new content
         const fd = fs.openSync(LOG_FILE, 'r');
         const buffer = Buffer.alloc(currentSize - offset);
