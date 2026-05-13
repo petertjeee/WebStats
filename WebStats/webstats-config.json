@@ -1,0 +1,7 @@
+{
+    "pollInterval": 60,
+    "dataRetentionMonths": 12,
+    "adminRetentionDays": 7,
+    "updateCheck": true,
+    "githubRepo": "YOUR_GITHUB_USERNAME/WebStats"
+}
