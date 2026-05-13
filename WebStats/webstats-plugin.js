@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS FRONTEND FOR FM-DX-WEBSERVER (V1.3.0)        ///
+///  WEBSTATS FRONTEND FOR FM-DX-WEBSERVER (V1.4.0)        ///
 ///                                                         ///
 ///  Visitor statistics dashboard                            ///
 ///                                                         ///
@@ -9,7 +9,7 @@
 (() => {
     'use strict';
 
-    const PLUGIN_VERSION = '1.3.0';
+    const PLUGIN_VERSION = '1.4.0';
     const DATA_URL = '/js/plugins/WebStats/webstats-data.json';
     const CONFIG_URL = '/js/plugins/WebStats/webstats-config.json';
     const REFRESH_INTERVAL = 60000;

@@ -95,6 +95,13 @@ It tracks the file read position (byte offset) and only processes new lines on e
 
 ## Version History
 
+### 1.4.0
+- Theme-aware UI: all colors adapt to the active fm-dx-webserver theme
+- Automatic re-render when the user switches themes
+- Compatible button placement for both new (v2+) and legacy fm-dx-webserver
+- English language UI
+- Last 10 visitors table in admin overview (IP, location, ISP, connect time)
+
 ### 1.3.0
 - Session duration tracking: average and max time visitors are connected
 - Session stats shown in summary cards, daily breakdown, and month comparison
