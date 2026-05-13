@@ -389,19 +389,6 @@ function processLogFile() {
         // Nothing new to read
         if (currentSize <= offset) return;
 
-        // If reading from the beginning, clear existing stats to avoid double-counting
-        const isFullReread = (offset === 0);
-        if (isFullReread) {
-            logMsg('Full log re-read: clearing existing day data to avoid double-counting');
-            statsData.days = {};
-            statsData._current_day = null;
-            statsData._current_day_ips = [];
-            adminData.recent_ips = {};
-            adminData.top_ips = {};
-            adminData.last_visitors = [];
-            Object.keys(activeSessions).forEach(k => delete activeSessions[k]);
-        }
-
         // Read only the new content
         const fd = fs.openSync(LOG_FILE, 'r');
         const buffer = Buffer.alloc(currentSize - offset);
@@ -410,6 +397,33 @@ function processLogFile() {
 
         const newContent = buffer.toString('utf8');
         const lines = newContent.split('\n');
+
+        // If re-reading from offset 0, clear only the days present in this log
+        // to prevent double-counting while preserving historical data
+        if (offset === 0) {
+            const dateKeysInLog = new Set();
+            lines.forEach(line => {
+                const m = line.match(/^\[([^\]]+)\]\s+\[INFO\]\s+Web client (connected|disconnected)/);
+                if (m) {
+                    try {
+                        const d = parseTimestamp(m[1]);
+                        dateKeysInLog.add(getDateKey(d));
+                    } catch (e) {}
+                }
+            });
+            if (dateKeysInLog.size > 0) {
+                dateKeysInLog.forEach(dk => {
+                    delete statsData.days[dk];
+                    delete adminData.recent_ips[dk];
+                });
+                statsData._current_day = null;
+                statsData._current_day_ips = [];
+                adminData.last_visitors = [];
+                Object.keys(activeSessions).forEach(k => delete activeSessions[k]);
+                logMsg('Re-reading from start: cleared ' + dateKeysInLog.size + ' day(s) to avoid double-counting');
+            }
+        }
+
         let processed = 0;
 
         lines.forEach(line => {
