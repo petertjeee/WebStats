@@ -61,8 +61,8 @@
 
     // ========== Admin Detection & WebSocket ==========
     function detectAdmin() {
-        // fm-dx-webserver injects isAdminAuthenticated via EJS template
-        if (typeof isAdminAuthenticated !== 'undefined' && isAdminAuthenticated === true) {
+        // fm-dx-webserver renders .admin-quick-dashboard only for authenticated admins
+        if (document.querySelector('.admin-quick-dashboard #dashboard-lock-admin')) {
             isAdmin = true;
             console.log('[WebStats] Admin mode detected');
             connectAdminWebSocket();
