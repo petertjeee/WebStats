@@ -44,6 +44,7 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
     "pollInterval": 60,
     "dataRetentionMonths": 12,
     "adminRetentionDays": 7,
+    "adminOnly": false,
     "updateCheck": true,
     "githubRepo": "YOUR_GITHUB_USERNAME/WebStats"
 }
@@ -54,6 +55,7 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
 | `pollInterval` | `60` | How often to check the log file for new entries (in seconds) |
 | `dataRetentionMonths` | `12` | How many months of data to keep. Set to `0` to keep everything |
 | `adminRetentionDays` | `7` | How many days of detailed IP data to keep for admin view |
+| `adminOnly` | `false` | When `true`, statistics are only visible to logged-in admins |
 | `updateCheck` | `true` | Check GitHub for plugin updates (once per day) |
 | `githubRepo` | `""` | GitHub repository path for update checks (e.g. `user/WebStats`) |
 

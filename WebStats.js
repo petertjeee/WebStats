@@ -34,7 +34,8 @@ let config = {
     dataRetentionMonths: 12,
     updateCheck: true,
     githubRepo: '',
-    adminRetentionDays: 7
+    adminRetentionDays: 7,
+    adminOnly: false
 };
 
 // --- Load configuration ---
@@ -171,7 +172,9 @@ function saveData() {
             fs.mkdirSync(PLUGIN_DIR, { recursive: true });
         }
         fs.writeFileSync(DATA_FILE, JSON.stringify(statsData, null, 2), 'utf8');
-        ensureWebAccessible();
+        if (!config.adminOnly) {
+            ensureWebAccessible();
+        }
     } catch (err) {
         logMsg('Error saving data: ' + err.message);
     }
@@ -499,6 +502,13 @@ function initWebSocket() {
                                 lastVisitors: adminData.last_visitors || [],
                                 isAdmin: true
                             }
+                        }));
+                    }
+                    // Serve stats data via WebSocket when adminOnly is enabled
+                    if (data.type === 'webstats-data-request' && isAdmin) {
+                        ws.send(JSON.stringify({
+                            type: 'webstats-data',
+                            value: statsData
                         }));
                     }
                 } catch (e) {

@@ -26,7 +26,8 @@
         pollInterval: 60,
         dataRetentionMonths: 12,
         updateCheck: true,
-        githubRepo: ''
+        githubRepo: '',
+        adminOnly: false
     };
 
     // Admin state
@@ -81,6 +82,12 @@
                         adminDataCache = data.value;
                         if (modalOpen) {
                             renderAdminSections();
+                        }
+                    }
+                    if (data.type === 'webstats-data' && data.value) {
+                        statsData = data.value;
+                        if (modalOpen) {
+                            loadAndRender();
                         }
                     }
                 } catch (e) {}
@@ -639,6 +646,13 @@
 
     // ========== Data Fetching ==========
     async function fetchData() {
+        // In adminOnly mode, request data via WebSocket
+        if (pluginConfig.adminOnly) {
+            if (pluginsWs && pluginsWs.readyState === WebSocket.OPEN) {
+                pluginsWs.send(JSON.stringify({ type: 'webstats-data-request' }));
+            }
+            return statsData; // Return current cached data (updated via WebSocket message)
+        }
         const res = await fetch(DATA_URL + '?t=' + Date.now());
         if (!res.ok) throw new Error('HTTP ' + res.status);
         return res.json();
@@ -1659,6 +1673,14 @@
     // ========== Initialize ==========
     async function init() {
         detectAdmin();
+        await loadPluginConfig();
+
+        // If adminOnly mode is enabled, only show for admins
+        if (pluginConfig.adminOnly && !isAdmin) {
+            console.log('[WebStats] Admin-only mode, not showing for non-admin user');
+            return;
+        }
+
         injectStyles();
         createModal();
         createButton();
@@ -1669,7 +1691,6 @@
             console.warn('[WebStats] Could not load Chart.js:', e.message);
         }
 
-        await loadPluginConfig();
         checkForUpdate();
         observeThemeChanges();
 
