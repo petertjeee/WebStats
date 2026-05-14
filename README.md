@@ -97,6 +97,11 @@ It uses timestamp-based deduplication to track which lines have already been pro
 
 ## Version History
 
+### 1.5.0
+- Admin-only mode: set `"adminOnly": true` to restrict stats to logged-in admins only
+- When admin-only, stats data is served via authenticated WebSocket (not public HTTP)
+- Non-admin users see no button or dashboard
+
 ### 1.4.0
 - Theme-aware UI: all colors adapt to the active fm-dx-webserver theme
 - Automatic re-render when the user switches themes
