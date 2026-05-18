@@ -48,7 +48,12 @@ function loadConfig() {
             const raw = fs.readFileSync(CONFIG_FILE, 'utf8');
             const userConfig = JSON.parse(raw);
             Object.assign(config, userConfig);
-            logMsg('Config loaded: poll=' + config.pollInterval + 's, retention=' + config.dataRetentionMonths + ' months');
+            // Normalize ignoreIPs: accept string or comma-separated string
+            if (config.ignoreIPs && !Array.isArray(config.ignoreIPs)) {
+                config.ignoreIPs = String(config.ignoreIPs).split(',').map(s => s.trim()).filter(Boolean);
+            }
+            logMsg('Config loaded: poll=' + config.pollInterval + 's, retention=' + config.dataRetentionMonths + ' months' +
+                (config.ignoreIPs.length ? ', ignoring ' + config.ignoreIPs.length + ' IP(s)' : ''));
         } else {
             logMsg('No webstats-config.json found, using defaults');
         }
@@ -302,7 +307,7 @@ function processLine(line) {
     if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return false;
 
     // Ignore user-configured IPs
-    if (config.ignoreIPs && config.ignoreIPs.length > 0) {
+    if (Array.isArray(config.ignoreIPs) && config.ignoreIPs.length > 0) {
         if (config.ignoreIPs.includes(ip)) return false;
     }
 
