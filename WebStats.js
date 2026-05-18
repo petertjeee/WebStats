@@ -249,39 +249,12 @@ function removeWebAccessible() {
 }
 
 // --- Parse timestamp from log line ---
+// fm-dx-webserver always uses DD/MM/YYYY HH:MM format (from toLocaleDateString + toLocaleTimeString)
 function parseTimestamp(tsString) {
-    // Try native Date parsing first
-    try {
-        const d = new Date(tsString);
-        if (!isNaN(d.getTime())) return d;
-    } catch (e) {}
-
-    // Manual extraction for various locale formats
-    const match = tsString.match(/(\d{1,4})[\.\/\-](\d{1,2})[\.\/\-](\d{1,4})\s+(\d{1,2}):(\d{2})(?:\s*(AM|PM))?/i);
+    const match = tsString.match(/(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})\s+(\d{1,2}):(\d{2})/);
     if (match) {
-        let [, a, b, c, hour, minute, ampm] = match;
-        hour = parseInt(hour);
-        if (ampm) {
-            if (ampm.toUpperCase() === 'PM' && hour < 12) hour += 12;
-            if (ampm.toUpperCase() === 'AM' && hour === 12) hour = 0;
-        }
-
-        let year, month, day;
-        if (parseInt(a) > 31) {
-            year = parseInt(a); month = parseInt(b); day = parseInt(c);
-        } else if (parseInt(c) > 31) {
-            year = parseInt(c);
-            if (parseInt(a) <= 12) {
-                month = parseInt(a); day = parseInt(b);
-            } else {
-                day = parseInt(a); month = parseInt(b);
-            }
-        } else {
-            year = parseInt(c) < 100 ? 2000 + parseInt(c) : parseInt(c);
-            month = parseInt(a); day = parseInt(b);
-        }
-
-        const d = new Date(year, month - 1, day, hour, parseInt(minute));
+        const [, day, month, year, hour, minute] = match;
+        const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute));
         if (!isNaN(d.getTime())) return d;
     }
 
