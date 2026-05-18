@@ -207,6 +207,47 @@ function ensureWebAccessible() {
     }
 }
 
+// --- Make config file accessible via HTTP ---
+function ensureConfigAccessible() {
+    if (process.platform !== 'win32') {
+        const webDir = path.join(__dirname, '..', 'web', 'js', 'plugins', 'WebStats');
+        const webConfigFile = path.join(webDir, 'webstats-config.json');
+        try {
+            if (!fs.existsSync(webDir)) {
+                fs.mkdirSync(webDir, { recursive: true });
+            }
+            if (fs.existsSync(webConfigFile)) {
+                const stat = fs.lstatSync(webConfigFile);
+                if (stat.isSymbolicLink() || stat.isFile()) {
+                    fs.unlinkSync(webConfigFile);
+                }
+            }
+            fs.symlinkSync(CONFIG_FILE, webConfigFile);
+        } catch (e) {
+            try {
+                fs.copyFileSync(CONFIG_FILE, webConfigFile);
+            } catch (e2) {}
+        }
+    }
+}
+
+// --- Remove public data file when adminOnly is enabled ---
+function removeWebAccessible() {
+    const webDir = path.join(__dirname, '..', 'web', 'js', 'plugins', 'WebStats');
+    const webDataFile = path.join(webDir, 'webstats-data.json');
+    try {
+        if (fs.existsSync(webDataFile)) {
+            const stat = fs.lstatSync(webDataFile);
+            if (stat.isSymbolicLink() || stat.isFile()) {
+                fs.unlinkSync(webDataFile);
+                logMsg('Removed public data file (adminOnly mode)');
+            }
+        }
+    } catch (e) {
+        // Ignore errors
+    }
+}
+
 // --- Parse timestamp from log line ---
 function parseTimestamp(tsString) {
     // Try native Date parsing first
@@ -564,9 +605,13 @@ function initWebSocket() {
 
 // --- Initialize ---
 loadConfig();
-logMsg('Initializing, monitoring ' + LOG_FILE);
+ensureConfigAccessible();
+logMsg('Initializing, monitoring ' + LOG_FILE + (config.adminOnly ? ' (admin-only mode)' : ''));
 loadData();
 loadAdminData();
+if (config.adminOnly) {
+    removeWebAccessible();
+}
 purgeOldData();
 purgeAdminData();
 processLogFile();
