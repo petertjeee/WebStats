@@ -67,7 +67,8 @@ let statsData = {
     days: {},
     _current_day: null,
     _current_day_ips: [],
-    _last_timestamp: 0
+    _last_timestamp: 0,
+    _processed_hashes: []
 };
 
 // --- Admin data (IP details, NOT web-accessible) ---
@@ -107,7 +108,7 @@ function loadData() {
         }
     } catch (err) {
         logMsg('Error loading data file, starting fresh: ' + err.message);
-        statsData = { days: {}, _current_day: null, _current_day_ips: [], _last_timestamp: 0 };
+        statsData = { days: {}, _current_day: null, _current_day_ips: [], _last_timestamp: 0, _processed_hashes: [] };
     }
 }
 
@@ -378,7 +379,10 @@ function processDisconnectLine(line) {
 // timestamp-based deduplication: only process lines newer than _last_timestamp.
 function processLogFile() {
     try {
-        if (!fs.existsSync(LOG_FILE)) return;
+        if (!fs.existsSync(LOG_FILE)) {
+            logMsg('Log file not found: ' + LOG_FILE);
+            return;
+        }
 
         const content = fs.readFileSync(LOG_FILE, 'utf8');
         const lines = content.split('\n');
@@ -386,6 +390,13 @@ function processLogFile() {
         const lastEpoch = statsData._last_timestamp || 0;
         let latestEpoch = lastEpoch;
         let processed = 0;
+        let skipped = 0;
+        let totalLines = 0;
+
+        // To handle minute-resolution timestamps, we track which lines at the
+        // exact lastEpoch minute were already processed using a line hash set.
+        // Lines with the same timestamp are deduplicated by their full content.
+        const processedHashes = statsData._processed_hashes || [];
 
         lines.forEach(line => {
             line = line.trim();
@@ -395,11 +406,24 @@ function processLogFile() {
             const tsMatch = line.match(/^\[([^\]]+)\]/);
             if (!tsMatch) return;
 
+            totalLines++;
             const lineDate = parseTimestamp(tsMatch[1]);
             const lineEpoch = lineDate.getTime();
 
-            // Skip lines we've already processed
-            if (lineEpoch <= lastEpoch) return;
+            // Skip lines older than the last processed timestamp
+            if (lineEpoch < lastEpoch) {
+                skipped++;
+                return;
+            }
+
+            // For lines at the exact same timestamp, check if already processed
+            if (lineEpoch === lastEpoch) {
+                const lineHash = line.substring(0, 120);
+                if (processedHashes.includes(lineHash)) {
+                    skipped++;
+                    return;
+                }
+            }
 
             if (processLine(line)) {
                 processed++;
@@ -410,14 +434,28 @@ function processLogFile() {
             }
         });
 
-        if (latestEpoch !== lastEpoch) {
+        // Build hash set for lines at the latest timestamp (for next cycle dedup)
+        if (latestEpoch !== lastEpoch || processed > 0) {
+            const newHashes = [];
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+                const tsMatch = line.match(/^\[([^\]]+)\]/);
+                if (!tsMatch) return;
+                const d = parseTimestamp(tsMatch[1]);
+                if (d.getTime() === latestEpoch) {
+                    newHashes.push(line.substring(0, 120));
+                }
+            });
+            statsData._processed_hashes = newHashes;
             statsData._last_timestamp = latestEpoch;
         }
+
+        logMsg('Log poll: ' + totalLines + ' lines, ' + skipped + ' skipped, ' + processed + ' new, lastTs=' + (lastEpoch ? new Date(lastEpoch).toISOString() : 'none'));
 
         if (processed > 0) {
             saveData();
             saveAdminData();
-            logMsg('Processed ' + processed + ' new connection(s)');
         }
     } catch (err) {
         logMsg('Error processing log file: ' + err.message);
