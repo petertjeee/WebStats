@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V1.5.1)          ///
+///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.0.0)          ///
 ///                                                         ///
 ///  Visitor statistics from serverlog.txt                   ///
 ///                                                         ///
@@ -12,7 +12,7 @@ const path = require('path');
 // Plugin configuration
 var pluginConfig = {
     name: 'WebStats',
-    version: '1.5.1',
+    version: '2.0.0',
     author: 'Peter',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
@@ -35,7 +35,10 @@ let config = {
     updateCheck: true,
     githubRepo: '',
     adminRetentionDays: 7,
-    adminOnly: false
+    adminOnly: false,
+    ignoreIPs: [],
+    peakAlertThreshold: 0,
+    webhookUrl: ''
 };
 
 // --- Load configuration ---
@@ -68,7 +71,8 @@ let statsData = {
     _current_day: null,
     _current_day_ips: [],
     _last_timestamp: 0,
-    _processed_hashes: []
+    _processed_hashes: [],
+    _known_ips: []
 };
 
 // --- Admin data (IP details, NOT web-accessible) ---
@@ -108,7 +112,7 @@ function loadData() {
         }
     } catch (err) {
         logMsg('Error loading data file, starting fresh: ' + err.message);
-        statsData = { days: {}, _current_day: null, _current_day_ips: [], _last_timestamp: 0, _processed_hashes: [] };
+        statsData = { days: {}, _current_day: null, _current_day_ips: [], _last_timestamp: 0, _processed_hashes: [], _known_ips: [] };
     }
 }
 
@@ -297,6 +301,11 @@ function processLine(line) {
     // Ignore localhost connections
     if (ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1') return false;
 
+    // Ignore user-configured IPs
+    if (config.ignoreIPs && config.ignoreIPs.length > 0) {
+        if (config.ignoreIPs.includes(ip)) return false;
+    }
+
     const date = parseTimestamp(timestamp);
     const dateKey = getDateKey(date);
     const hour = date.getHours();
@@ -329,10 +338,24 @@ function processLine(line) {
 
     // Unique visitors
     if (!statsData._current_day_ips) statsData._current_day_ips = [];
-    if (!statsData._current_day_ips.includes(ip)) {
+    const isFirstVisitToday = !statsData._current_day_ips.includes(ip);
+    if (isFirstVisitToday) {
         statsData._current_day_ips.push(ip);
     }
     day.unique_visitors = statsData._current_day_ips.length;
+
+    // Returning vs new visitors (only count once per day per unique IP)
+    if (!statsData._known_ips) statsData._known_ips = [];
+    if (!day.new_visitors) day.new_visitors = 0;
+    if (!day.returning_visitors) day.returning_visitors = 0;
+    if (isFirstVisitToday) {
+        if (!statsData._known_ips.includes(ip)) {
+            statsData._known_ips.push(ip);
+            day.new_visitors++;
+        } else {
+            day.returning_visitors++;
+        }
+    }
 
     // Location
     const loc = location.trim();
@@ -341,6 +364,12 @@ function processLine(line) {
     // ISP
     const ispName = isp.trim();
     day.isps[ispName] = (day.isps[ispName] || 0) + 1;
+
+    // Peak concurrent alert
+    const concurrentNum2 = parseInt(concurrent);
+    if (config.peakAlertThreshold > 0 && concurrentNum2 >= config.peakAlertThreshold) {
+        triggerPeakAlert(concurrentNum2, dateKey, hour);
+    }
 
     // Admin: record IP details
     recordAdminVisit(dateKey, ip, loc, ispName, hour, date.getMinutes());
@@ -385,6 +414,41 @@ function processDisconnectLine(line) {
     if (activeSessions[ip].length === 0) delete activeSessions[ip];
 
     return true;
+}
+
+// --- Peak alert webhook ---
+let lastAlertTime = 0;
+function triggerPeakAlert(concurrent, dateKey, hour) {
+    const now = Date.now();
+    // Don't spam: max one alert per 5 minutes
+    if (now - lastAlertTime < 300000) return;
+    lastAlertTime = now;
+
+    logMsg('Peak alert! ' + concurrent + ' concurrent visitors at ' + dateKey + ' ' + String(hour).padStart(2, '0') + ':00');
+
+    if (config.webhookUrl) {
+        const payload = JSON.stringify({
+            text: `[WebStats] Peak alert: ${concurrent} concurrent visitors (${dateKey} ${String(hour).padStart(2, '0')}:00)`,
+            concurrent: concurrent,
+            date: dateKey,
+            hour: hour
+        });
+
+        const url = new URL(config.webhookUrl);
+        const options = {
+            hostname: url.hostname,
+            port: url.port || (url.protocol === 'https:' ? 443 : 80),
+            path: url.pathname + url.search,
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) }
+        };
+
+        const lib = url.protocol === 'https:' ? require('https') : require('http');
+        const req = lib.request(options, () => {});
+        req.on('error', (e) => logMsg('Webhook error: ' + e.message));
+        req.write(payload);
+        req.end();
+    }
 }
 
 // --- Read and process new lines from the log file ---
@@ -562,6 +626,35 @@ function initWebSocket() {
                             type: 'webstats-data',
                             value: statsData
                         }));
+                    }
+                    // Backup: send full data to admin
+                    if (data.type === 'webstats-backup-request' && isAdmin) {
+                        ws.send(JSON.stringify({
+                            type: 'webstats-backup',
+                            value: {
+                                statsData: statsData,
+                                adminData: adminData,
+                                exportDate: new Date().toISOString(),
+                                version: pluginConfig.version
+                            }
+                        }));
+                    }
+                    // Restore: load data from admin upload
+                    if (data.type === 'webstats-restore' && isAdmin && data.value) {
+                        try {
+                            if (data.value.statsData) {
+                                statsData = data.value.statsData;
+                                saveData();
+                            }
+                            if (data.value.adminData) {
+                                adminData = data.value.adminData;
+                                saveAdminData();
+                            }
+                            ws.send(JSON.stringify({ type: 'webstats-restore-result', value: { success: true } }));
+                            logMsg('Data restored by admin');
+                        } catch (e) {
+                            ws.send(JSON.stringify({ type: 'webstats-restore-result', value: { success: false, error: e.message } }));
+                        }
                     }
                 } catch (e) {
                     // Ignore non-JSON or irrelevant messages

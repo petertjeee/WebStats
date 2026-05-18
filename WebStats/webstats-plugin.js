@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS FRONTEND FOR FM-DX-WEBSERVER (V1.5.1)        ///
+///  WEBSTATS FRONTEND FOR FM-DX-WEBSERVER (V2.0.0)        ///
 ///                                                         ///
 ///  Visitor statistics dashboard                            ///
 ///                                                         ///
@@ -9,7 +9,7 @@
 (() => {
     'use strict';
 
-    const PLUGIN_VERSION = '1.5.1';
+    const PLUGIN_VERSION = '2.0.0';
     const DATA_URL = '/js/plugins/WebStats/webstats-data.json';
     const CONFIG_URL = '/js/plugins/WebStats/webstats-config.json';
     const REFRESH_INTERVAL = 60000;
@@ -34,6 +34,12 @@
     let isAdmin = false;
     let pluginsWs = null;
     let adminDataCache = null;
+
+    // Multi-server data cache
+    let remoteServersData = {};
+
+    // Heatmap color scheme
+    let heatmapScheme = localStorage.getItem('webstats_heatmap_scheme') || 'theme';
 
     // ========== Chart.js Loading ==========
     function loadChartJS() {
@@ -88,6 +94,18 @@
                         statsData = data.value;
                         if (modalOpen) {
                             loadAndRender();
+                        }
+                    }
+                    if (data.type === 'webstats-backup' && data.value) {
+                        const blob = new Blob([JSON.stringify(data.value, null, 2)], { type: 'application/json' });
+                        downloadBlob(blob, `webstats-backup-${getDateKey(new Date())}.json`);
+                    }
+                    if (data.type === 'webstats-restore-result' && data.value) {
+                        if (data.value.success) {
+                            alert('Backup restored successfully!');
+                            loadAndRender();
+                        } else {
+                            alert('Restore failed: ' + (data.value.error || 'Unknown error'));
                         }
                     }
                 } catch (e) {}
@@ -210,6 +228,20 @@
             }
             .ws-close:hover {
                 color: #e74c3c;
+            }
+            .ws-btn-sm {
+                background: var(--color-2);
+                color: var(--color-text);
+                border: 1px solid var(--color-3);
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 11px;
+                cursor: pointer;
+                font-family: inherit;
+                transition: background 0.2s;
+            }
+            .ws-btn-sm:hover {
+                background: var(--color-3);
             }
 
             /* Content */
@@ -533,6 +565,70 @@
                 background: var(--color-1);
             }
 
+            /* Geo Country Bars */
+            .ws-geo-bars {
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .ws-geo-bar-row {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .ws-geo-label {
+                font-size: 13px;
+                min-width: 55px;
+                white-space: nowrap;
+            }
+            .ws-geo-bar-track {
+                flex: 1;
+                height: 16px;
+                background: var(--color-1);
+                border-radius: 3px;
+                overflow: hidden;
+            }
+            .ws-geo-bar-fill {
+                height: 100%;
+                border-radius: 3px;
+                transition: width 0.3s;
+            }
+            .ws-geo-count {
+                font-size: 12px;
+                color: var(--color-3);
+                min-width: 40px;
+                text-align: right;
+            }
+
+            /* Visitor Trends */
+            .ws-trends-box {
+                background: var(--color-2);
+                border-radius: 10px;
+                padding: 16px;
+                border: 1px solid var(--color-2);
+                margin-bottom: 24px;
+            }
+            .ws-trends-box h3 {
+                margin: 0 0 12px 0;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--color-4);
+            }
+            .ws-trends-grid {
+                display: flex;
+                gap: 24px;
+                flex-wrap: wrap;
+            }
+            .ws-trend-item {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            .ws-trend-label {
+                font-size: 13px;
+                color: var(--color-3);
+            }
+
             /* Admin Section */
             .ws-admin-section {
                 border-top: 2px solid rgba(231, 76, 60, 0.3);
@@ -748,6 +844,128 @@
         return m + 'm ' + s + 's';
     }
 
+    // ========== Country Flag Helper ==========
+    function getCountryFlag(locationStr) {
+        if (!locationStr) return '';
+        // Location format: "City, Region, CC" — extract last 2-letter country code
+        const parts = locationStr.split(',');
+        const lastPart = (parts[parts.length - 1] || '').trim().toUpperCase();
+        if (lastPart.length !== 2) return '';
+        // Convert country code to flag emoji using regional indicator symbols
+        const flag = String.fromCodePoint(
+            ...lastPart.split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
+        );
+        return flag;
+    }
+
+    // ========== Export Helpers ==========
+    function exportAsJSON() {
+        if (!statsData) return;
+        const blob = new Blob([JSON.stringify(statsData, null, 2)], { type: 'application/json' });
+        downloadBlob(blob, `webstats-export-${getDateKey(new Date())}.json`);
+    }
+
+    function exportAsCSV() {
+        if (!statsData || !statsData.days) return;
+        const rows = [['Date', 'Total Visits', 'Unique Visitors', 'Peak Concurrent', 'New Visitors', 'Returning Visitors', 'Avg Session (s)', 'Max Session (s)', 'Top Location', 'Top ISP']];
+        Object.keys(statsData.days).sort().forEach(key => {
+            const d = statsData.days[key];
+            const topLoc = sortedEntries(d.locations, 1);
+            const topISP = sortedEntries(d.isps, 1);
+            rows.push([
+                key,
+                d.total_visits || 0,
+                d.unique_visitors || 0,
+                d.peak_concurrent || 0,
+                d.new_visitors || 0,
+                d.returning_visitors || 0,
+                d.session_count > 0 ? Math.round(d.total_session_seconds / d.session_count) : 0,
+                d.max_session_seconds || 0,
+                topLoc.length ? topLoc[0][0] : '',
+                topISP.length ? topISP[0][0] : ''
+            ]);
+        });
+        const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        downloadBlob(blob, `webstats-export-${getDateKey(new Date())}.csv`);
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 100);
+    }
+
+    // ========== Backup/Restore ==========
+    function requestBackup() {
+        if (!pluginsWs || pluginsWs.readyState !== WebSocket.OPEN) return;
+        pluginsWs.send(JSON.stringify({ type: 'webstats-backup-request' }));
+    }
+
+    function restoreFromFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (!data.statsData && !data.adminData) {
+                        alert('Invalid backup file');
+                        return;
+                    }
+                    if (!confirm('Restore this backup? Current data will be overwritten.')) return;
+                    if (pluginsWs && pluginsWs.readyState === WebSocket.OPEN) {
+                        pluginsWs.send(JSON.stringify({ type: 'webstats-restore', value: data }));
+                    }
+                } catch (err) {
+                    alert('Invalid JSON file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        };
+        input.click();
+    }
+
+    // ========== Heatmap Color Schemes ==========
+    const heatmapSchemes = {
+        theme: { name: 'Theme', getColor: (intensity) => { const c = getThemeColorRgb('--color-main-bright'); return { r: c.r, g: c.g, b: c.b }; }},
+        green: { name: 'Green', getColor: () => ({ r: 0, g: 200, b: 80 }) },
+        blue: { name: 'Blue', getColor: () => ({ r: 50, g: 130, b: 220 }) },
+        purple: { name: 'Purple', getColor: () => ({ r: 160, g: 60, b: 220 }) },
+        orange: { name: 'Orange', getColor: () => ({ r: 240, g: 130, b: 20 }) }
+    };
+
+    // ========== Visitor Trends Helper ==========
+    function calcDayOverDay(days) {
+        const today = getDateKey(new Date());
+        const yesterday = getDateKey(new Date(Date.now() - 86400000));
+        const todayData = days[today];
+        const yesterdayData = days[yesterday];
+        if (!todayData || !yesterdayData) return null;
+        return calcChange(todayData.total_visits || 0, yesterdayData.total_visits || 0);
+    }
+
+    function calcWeekOverWeek(days) {
+        const now = new Date();
+        let thisWeek = 0, lastWeek = 0;
+        for (let i = 0; i < 7; i++) {
+            const d1 = getDateKey(new Date(now.getTime() - i * 86400000));
+            const d2 = getDateKey(new Date(now.getTime() - (i + 7) * 86400000));
+            if (days[d1]) thisWeek += days[d1].total_visits || 0;
+            if (days[d2]) lastWeek += days[d2].total_visits || 0;
+        }
+        if (thisWeek === 0 && lastWeek === 0) return null;
+        return calcChange(thisWeek, lastWeek);
+    }
+
     // ========== Theme Color Helper ==========
     function getThemeColor(varName, fallback) {
         const val = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
@@ -949,6 +1167,8 @@
                     <div class="ws-header-controls">
                         <select id="ws-year-select" class="ws-select"></select>
                         <select id="ws-month-select" class="ws-select"></select>
+                        <button id="ws-export-csv" class="ws-btn-sm" title="Export CSV">CSV</button>
+                        <button id="ws-export-json" class="ws-btn-sm" title="Export JSON">JSON</button>
                         <button class="ws-close" title="Close">&times;</button>
                     </div>
                 </div>
@@ -967,6 +1187,8 @@
         overlay.querySelector('.ws-close').addEventListener('click', closeModal);
         document.getElementById('ws-year-select').addEventListener('change', onYearChange);
         document.getElementById('ws-month-select').addEventListener('change', onMonthChange);
+        document.getElementById('ws-export-csv').addEventListener('click', exportAsCSV);
+        document.getElementById('ws-export-json').addEventListener('click', exportAsJSON);
     }
 
     // ========== Modal Open/Close ==========
@@ -975,6 +1197,7 @@
         overlay.classList.add('active');
         modalOpen = true;
         selectedDay = null;
+        fetchRemoteServers().then(() => loadAndRender());
         loadAndRender();
         requestAdminData();
         refreshTimer = setInterval(() => {
@@ -1099,15 +1322,21 @@
             <!-- Heatmap -->
             <div id="ws-heatmap"></div>
 
+            <!-- Geolocation Map -->
+            <div id="ws-geomap"></div>
+
+            <!-- Visitor Trends -->
+            <div id="ws-trends"></div>
+
             <!-- Top Locations & ISPs -->
             <div class="ws-tables-row">
                 <div class="ws-table-box">
                     <h3>Top locations — ${getMonthName(selectedMonth)}</h3>
-                    ${renderTopTable(stats.monthLocations)}
+                    ${renderTopTable(stats.monthLocations, true)}
                 </div>
                 <div class="ws-table-box">
                     <h3>Top ISPs — ${getMonthName(selectedMonth)}</h3>
-                    ${renderTopTable(stats.monthISPs)}
+                    ${renderTopTable(stats.monthISPs, false)}
                 </div>
             </div>
 
@@ -1121,6 +1350,9 @@
             <!-- Hourly Detail (shown when a day is selected) -->
             <div id="ws-hourly-detail"></div>
 
+            <!-- Multi-Server Comparison -->
+            <div id="ws-multi-server"></div>
+
             <!-- Admin Section (only for authenticated admins) -->
             <div id="ws-admin-area"></div>
         `;
@@ -1129,6 +1361,9 @@
         renderMonthChart(stats);
         renderComparison(document.getElementById('ws-comparison'), stats.comparison, stats);
         renderHeatmap(document.getElementById('ws-heatmap'), stats.heatmap);
+        renderGeoMap(document.getElementById('ws-geomap'), stats.monthLocations);
+        renderTrends(document.getElementById('ws-trends'), statsData.days || {});
+        renderMultiServer(document.getElementById('ws-multi-server'));
 
         // Restore hourly detail if a day was selected
         if (selectedDay) {
@@ -1163,7 +1398,7 @@
     }
 
     // ========== Top Table Renderer ==========
-    function renderTopTable(data) {
+    function renderTopTable(data, showFlags) {
         const entries = sortedEntries(data, 10);
         if (entries.length === 0) {
             return '<div class="ws-empty">No data available</div>';
@@ -1173,9 +1408,10 @@
             <thead><tr><th>#</th><th>Name</th><th>Count</th></tr></thead><tbody>`;
 
         entries.forEach(([name, count], i) => {
+            const flag = showFlags ? getCountryFlag(name) : '';
             html += `<tr>
                 <td class="ws-rank">${i + 1}</td>
-                <td>${escapeHtml(name)}</td>
+                <td>${flag ? flag + ' ' : ''}${escapeHtml(name)}</td>
                 <td>${formatNumber(count)}</td>
             </tr>`;
         });
@@ -1195,11 +1431,11 @@
                 <th>Date</th>
                 <th>Visitors</th>
                 <th>Unique</th>
-                <th>Peak concurrent</th>
+                <th>New</th>
+                <th>Return</th>
+                <th>Peak</th>
                 <th>&#8960; Session</th>
-                <th>Max session</th>
                 <th>Top location</th>
-                <th>Top ISP</th>
             </tr></thead><tbody>`;
 
         const maxVisits = Math.max(...days.map(d => d.total_visits || 0));
@@ -1221,15 +1457,16 @@
             const avgSess = d.session_count > 0 ? Math.round(d.total_session_seconds / d.session_count) : 0;
             const maxSess = d.max_session_seconds || 0;
 
+            const topLocFlag = topLoc.length ? getCountryFlag(topLoc[0][0]) : '';
             html += `<tr class="ws-clickable ws-day-row ${isSelected ? 'ws-selected' : ''}" data-date="${d.date}">
                 <td>${dayName} ${dayNum} ${monthName}</td>
                 <td class="${isMaxVisits ? 'ws-highlight' : ''}">${formatNumber(d.total_visits || 0)}</td>
                 <td>${formatNumber(d.unique_visitors || 0)}</td>
+                <td>${d.new_visitors || 0}</td>
+                <td>${d.returning_visitors || 0}</td>
                 <td class="${isMaxPeak ? 'ws-highlight' : ''}">${d.peak_concurrent || 0}</td>
                 <td>${formatDuration(avgSess)}</td>
-                <td>${formatDuration(maxSess)}</td>
-                <td>${topLoc.length ? escapeHtml(topLoc[0][0]) : '-'}</td>
-                <td>${topISP.length ? escapeHtml(topISP[0][0]) : '-'}</td>
+                <td>${topLocFlag ? topLocFlag + ' ' : ''}${topLoc.length ? escapeHtml(topLoc[0][0]) : '-'}</td>
             </tr>`;
         });
 
@@ -1324,9 +1561,17 @@
         }
 
         const dayOrder = [1, 2, 3, 4, 5, 6, 0];
+        const scheme = heatmapSchemes[heatmapScheme] || heatmapSchemes.theme;
 
         let html = `<div class="ws-heatmap-box">
-            <h3>Activity heatmap — ${getMonthName(selectedMonth)} ${selectedYear}</h3>
+            <h3 style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+                <span>Activity heatmap — ${getMonthName(selectedMonth)} ${selectedYear}</span>
+                <select id="ws-heatmap-scheme" class="ws-select" style="font-size:11px;padding:3px 6px">
+                    ${Object.entries(heatmapSchemes).map(([key, s]) =>
+                        `<option value="${key}" ${key === heatmapScheme ? 'selected' : ''}>${s.name}</option>`
+                    ).join('')}
+                </select>
+            </h3>
             <div class="ws-heatmap">`;
 
         html += '<div class="ws-heatmap-label"></div>';
@@ -1339,7 +1584,7 @@
             for (let h = 0; h < 24; h++) {
                 const val = heatmap[dow][h];
                 const intensity = val / maxVal;
-                const tc = getThemeColorRgb('--color-main-bright');
+                const tc = scheme.getColor(intensity);
                 const r = Math.round(tc.r * intensity);
                 const g = Math.round(tc.g * intensity);
                 const b = Math.round(tc.b * intensity);
@@ -1353,6 +1598,171 @@
         });
 
         html += '</div></div>';
+        container.innerHTML = html;
+
+        // Scheme toggle handler
+        const schemeSelect = document.getElementById('ws-heatmap-scheme');
+        if (schemeSelect) {
+            schemeSelect.addEventListener('change', (e) => {
+                heatmapScheme = e.target.value;
+                localStorage.setItem('webstats_heatmap_scheme', heatmapScheme);
+                renderHeatmap(container, heatmap);
+            });
+        }
+    }
+
+    // ========== Geo Map (Country Bar Chart) ==========
+    function renderGeoMap(container, locations) {
+        // Aggregate visitors by country code
+        const countryCounts = {};
+        Object.entries(locations || {}).forEach(([loc, count]) => {
+            const parts = loc.split(',');
+            const cc = (parts[parts.length - 1] || '').trim().toUpperCase();
+            if (cc.length === 2 && /^[A-Z]{2}$/.test(cc)) {
+                countryCounts[cc] = (countryCounts[cc] || 0) + count;
+            }
+        });
+
+        const entries = Object.entries(countryCounts).sort((a, b) => b[1] - a[1]);
+        if (entries.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const maxCount = entries[0][1];
+        const top = entries.slice(0, 15);
+
+        let html = `<div class="ws-chart-container">
+            <h3>Visitors by country — ${getMonthName(selectedMonth)} ${selectedYear}</h3>
+            <div class="ws-geo-bars">`;
+
+        top.forEach(([cc, count]) => {
+            const flag = String.fromCodePoint(...cc.split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+            const pct = Math.round((count / maxCount) * 100);
+            const tc = getThemeColorRgb('--color-main-bright');
+            html += `<div class="ws-geo-bar-row">
+                <span class="ws-geo-label">${flag} ${cc}</span>
+                <div class="ws-geo-bar-track">
+                    <div class="ws-geo-bar-fill" style="width:${pct}%;background:rgba(${tc.r},${tc.g},${tc.b},0.7)"></div>
+                </div>
+                <span class="ws-geo-count">${formatNumber(count)}</span>
+            </div>`;
+        });
+
+        html += '</div></div>';
+        container.innerHTML = html;
+    }
+
+    // ========== Visitor Trends Renderer ==========
+    function renderTrends(container, days) {
+        const dod = calcDayOverDay(days);
+        const wow = calcWeekOverWeek(days);
+
+        if (!dod && !wow) {
+            container.innerHTML = '';
+            return;
+        }
+
+        function trendHtml(label, change) {
+            if (!change) return '';
+            const arrow = change.dir === 'up' ? '&#9650;' : change.dir === 'down' ? '&#9660;' : '&#8212;';
+            const cls = `ws-comp-${change.dir}`;
+            return `<div class="ws-trend-item">
+                <span class="ws-trend-label">${label}</span>
+                <span class="ws-comp-change ${cls}">${arrow} ${change.pct}%</span>
+            </div>`;
+        }
+
+        container.innerHTML = `
+            <div class="ws-trends-box">
+                <h3>Visitor trends</h3>
+                <div class="ws-trends-grid">
+                    ${trendHtml('Today vs yesterday', dod)}
+                    ${trendHtml('This week vs last week', wow)}
+                </div>
+            </div>
+        `;
+    }
+
+    // ========== Multi-Server Dashboard ==========
+    async function fetchRemoteServers() {
+        const servers = pluginConfig.remoteServers;
+        if (!servers || !Array.isArray(servers) || servers.length === 0) return;
+
+        for (const server of servers) {
+            try {
+                const url = server.url.replace(/\/$/, '') + '/js/plugins/WebStats/webstats-data.json?t=' + Date.now();
+                const res = await fetch(url, { mode: 'cors' });
+                if (res.ok) {
+                    remoteServersData[server.name] = await res.json();
+                }
+            } catch (e) {
+                console.warn(`[WebStats] Could not fetch from ${server.name}: ${e.message}`);
+            }
+        }
+    }
+
+    function renderMultiServer(container) {
+        const servers = pluginConfig.remoteServers;
+        if (!servers || !Array.isArray(servers) || servers.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        const today = getDateKey(new Date());
+        const monthPrefix = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+
+        let html = `<div class="ws-chart-container">
+            <h3>Multi-server comparison — ${getMonthName(selectedMonth)} ${selectedYear}</h3>
+            <table class="ws-table">
+                <thead><tr>
+                    <th>Server</th>
+                    <th>Today</th>
+                    <th>This month</th>
+                    <th>Peak</th>
+                    <th>Total</th>
+                </tr></thead><tbody>`;
+
+        // Local server first
+        const localToday = (statsData && statsData.days && statsData.days[today]) ? statsData.days[today].total_visits : 0;
+        let localMonth = 0, localPeak = 0, localTotal = 0;
+        if (statsData && statsData.days) {
+            Object.entries(statsData.days).forEach(([key, d]) => {
+                if (key.startsWith(monthPrefix)) { localMonth += d.total_visits || 0; if ((d.peak_concurrent || 0) > localPeak) localPeak = d.peak_concurrent; }
+                localTotal += d.total_visits || 0;
+            });
+        }
+        html += `<tr>
+            <td><strong>This server</strong></td>
+            <td>${formatNumber(localToday)}</td>
+            <td>${formatNumber(localMonth)}</td>
+            <td>${localPeak}</td>
+            <td>${formatNumber(localTotal)}</td>
+        </tr>`;
+
+        // Remote servers
+        servers.forEach(server => {
+            const data = remoteServersData[server.name];
+            if (!data || !data.days) {
+                html += `<tr><td>${escapeHtml(server.name)}</td><td colspan="4" style="color:var(--color-3)">Unavailable</td></tr>`;
+                return;
+            }
+            const rToday = data.days[today] ? data.days[today].total_visits : 0;
+            let rMonth = 0, rPeak = 0, rTotal = 0;
+            Object.entries(data.days).forEach(([key, d]) => {
+                if (key.startsWith(monthPrefix)) { rMonth += d.total_visits || 0; if ((d.peak_concurrent || 0) > rPeak) rPeak = d.peak_concurrent; }
+                rTotal += d.total_visits || 0;
+            });
+            html += `<tr>
+                <td>${escapeHtml(server.name)}</td>
+                <td>${formatNumber(rToday)}</td>
+                <td>${formatNumber(rMonth)}</td>
+                <td>${rPeak}</td>
+                <td>${formatNumber(rTotal)}</td>
+            </tr>`;
+        });
+
+        html += '</tbody></table></div>';
         container.innerHTML = html;
     }
 
@@ -1487,11 +1897,17 @@
         const topSorted = sortedEntriesObj(topIps, 'total', 20);
 
         let html = `<div class="ws-admin-section">
-            <h3 style="color:#e74c3c;font-size:14px;margin-bottom:16px;">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="#e74c3c" style="vertical-align:middle;margin-right:4px">
-                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
-                </svg>
-                Admin — IP Addresses
+            <h3 style="color:#e74c3c;font-size:14px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+                <span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="#e74c3c" style="vertical-align:middle;margin-right:4px">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                    Admin — IP Addresses
+                </span>
+                <span>
+                    <button class="ws-btn-sm" id="ws-backup-btn" title="Download backup">Backup</button>
+                    <button class="ws-btn-sm" id="ws-restore-btn" title="Restore from file">Restore</button>
+                </span>
             </h3>`;
 
         // Last 10 visitors
@@ -1583,6 +1999,12 @@
         html += '</div></div>';
 
         area.innerHTML = html;
+
+        // Backup/restore handlers
+        const backupBtn = document.getElementById('ws-backup-btn');
+        const restoreBtn = document.getElementById('ws-restore-btn');
+        if (backupBtn) backupBtn.addEventListener('click', requestBackup);
+        if (restoreBtn) restoreBtn.addEventListener('click', restoreFromFile);
     }
 
     // ========== Update Checker ==========

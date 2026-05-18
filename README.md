@@ -9,15 +9,23 @@ Visitor statistics plugin that monitors `serverlog.txt` and provides a dashboard
 - **Configurable data retention** — automatically purges data older than X months
 - **Dashboard with statistics per period** (year/month/day):
   - Total visitors per day
-  - Unique visitors per day  
+  - Unique visitors per day
+  - New vs. returning visitors
   - Peak concurrent visitors
-  - Top locations
+  - Top locations (with country flags)
   - Top ISPs
   - Hourly visitor distribution per day (click on a day)
   - Average and maximum session duration
 - **Monthly visitors chart** (Chart.js)
-- **Heatmap** — weekday × hour activity heatmap
+- **Visitors by country** — horizontal bar chart with flag emojis
+- **Heatmap** — weekday × hour activity heatmap (selectable color scheme)
+- **Visitor trends** — day-over-day and week-over-week percentage change
 - **Month comparison** — compare current month with previous month (with % change)
+- **Export** — download stats as CSV or JSON
+- **Backup & restore** — admin can download/upload full data backups
+- **IP ignore list** — exclude specific IP addresses from stats (e.g. your own)
+- **Peak alerts** — webhook notification when concurrent visitors exceed a threshold
+- **Multi-server dashboard** — compare stats across multiple fm-dx-webserver instances
 - **Update checker** — checks GitHub for new versions (once per day)
 - **Admin mode** — when logged in as admin, see IP addresses, visit counts, and top visitors
 - **Lightweight** — no external dependencies, minimal CPU/memory usage (ideal for Raspberry Pi)
@@ -45,8 +53,14 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
     "dataRetentionMonths": 12,
     "adminRetentionDays": 7,
     "adminOnly": false,
+    "ignoreIPs": ["192.168.1.100"],
+    "peakAlertThreshold": 10,
+    "webhookUrl": "https://hooks.slack.com/services/...",
     "updateCheck": true,
-    "githubRepo": "YOUR_GITHUB_USERNAME/WebStats"
+    "githubRepo": "YOUR_GITHUB_USERNAME/WebStats",
+    "remoteServers": [
+        { "name": "Server 2", "url": "https://other-server.example.com" }
+    ]
 }
 ```
 
@@ -56,25 +70,33 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
 | `dataRetentionMonths` | `12` | How many months of data to keep. Set to `0` to keep everything |
 | `adminRetentionDays` | `7` | How many days of detailed IP data to keep for admin view |
 | `adminOnly` | `false` | When `true`, statistics are only visible to logged-in admins |
+| `ignoreIPs` | `[]` | Array of IP addresses to exclude from statistics |
+| `peakAlertThreshold` | `0` | Send alert when concurrent visitors reach this number (0 = disabled) |
+| `webhookUrl` | `""` | Webhook URL for peak alerts (Slack, Discord, etc.) |
 | `updateCheck` | `true` | Check GitHub for plugin updates (once per day) |
 | `githubRepo` | `""` | GitHub repository path for update checks (e.g. `user/WebStats`) |
+| `remoteServers` | `[]` | Array of `{name, url}` objects for multi-server comparison |
 
 ## Usage
 
 Click the **WEBSTATS** button in the web interface to open the statistics dashboard. Use the year and month selectors to browse historical data.
 
 The dashboard shows:
-- **Summary cards** — today's visitors, monthly total, peak concurrent, all-time total
+- **Summary cards** — today's visitors, monthly total, peak concurrent, session duration, all-time total
 - **Month comparison** — current month vs. previous month with percentage change
 - **Monthly chart** — bar chart comparing visitors and unique visitors per month
-- **Heatmap** — weekday × hour grid showing when the server is busiest
-- **Top locations** — most common visitor locations
+- **Heatmap** — weekday × hour grid showing when the server is busiest (with color scheme picker)
+- **Visitors by country** — horizontal bar chart with flag emojis, aggregated from location data
+- **Visitor trends** — day-over-day and week-over-week change indicators
+- **Top locations** — most common visitor locations with country flags
 - **Top ISPs** — most common internet service providers
-- **Daily breakdown** — detailed table per day with highlights for peak values
+- **Daily breakdown** — table per day showing visitors, unique, new, returning, peak, session, top location
 - **Hourly detail** — click any day to see visitors per hour as a bar chart
-- **Session duration** — average and maximum time visitors stay connected, per day and month
+- **Multi-server comparison** — side-by-side stats from configured remote servers
+- **Export buttons** — download all stats as CSV or JSON at any time
 - **Admin: IP overview** — today's visitor IPs with location, ISP, and visit count (admin only)
 - **Admin: Top visitors** — all-time top IP addresses ranked by total visits (admin only)
+- **Admin: Backup/Restore** — download or upload full data backup (admin only)
 
 ## Data Storage
 
@@ -96,6 +118,18 @@ The plugin monitors `serverlog.txt` for lines matching the pattern:
 It uses timestamp-based deduplication to track which lines have already been processed, so it handles fm-dx-webserver's log truncation (5000 line limit) correctly without double-counting. Localhost connections (127.0.0.1) are ignored.
 
 ## Version History
+
+### 2.0.0
+- Country flag emojis on locations (top table, daily breakdown, country chart)
+- Visitors by country horizontal bar chart
+- New vs. returning visitors tracking per day
+- Day-over-day and week-over-week visitor trends
+- Export stats as CSV or JSON
+- IP ignore list (`ignoreIPs` config option)
+- Peak concurrent visitor alerts via webhook (`peakAlertThreshold`, `webhookUrl`)
+- Heatmap color scheme picker (Theme, Green, Blue, Purple, Orange)
+- Admin backup/restore buttons
+- Multi-server dashboard (`remoteServers` config option)
 
 ### 1.5.1
 - Fixed timestamp parsing on US-locale servers (DD/MM/YYYY was misread as MM/DD/YYYY)

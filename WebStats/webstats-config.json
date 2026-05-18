@@ -3,6 +3,10 @@
     "dataRetentionMonths": 12,
     "adminRetentionDays": 7,
     "adminOnly": false,
+    "ignoreIPs": [],
+    "peakAlertThreshold": 0,
+    "webhookUrl": "",
     "updateCheck": true,
-    "githubRepo": "petertjeee/WebStats"
+    "githubRepo": "petertjeee/WebStats",
+    "remoteServers": []
 }
