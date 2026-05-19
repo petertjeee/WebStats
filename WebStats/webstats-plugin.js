@@ -101,9 +101,13 @@
                         downloadBlob(blob, `webstats-backup-${getDateKey(new Date())}.json`);
                     }
                     if (data.type === 'webstats-remote-data' && data.value) {
+                        console.log('[WebStats] Received remote data:', Object.keys(data.value));
                         remoteServersData = data.value;
                         const msContainer = document.getElementById('ws-multi-server');
-                        if (msContainer) renderMultiServer(msContainer);
+                        if (msContainer) {
+                            console.log('[WebStats] Rendering multi-server table');
+                            renderMultiServer(msContainer);
+                        }
                     }
                     if (data.type === 'webstats-restore-result' && data.value) {
                         if (data.value.success) {
@@ -1691,7 +1695,10 @@
     function fetchRemoteServers() {
         // Request remote server data via WebSocket (backend fetches to avoid CORS)
         if (pluginsWs && pluginsWs.readyState === WebSocket.OPEN) {
+            console.log('[WebStats] Requesting remote server data');
             pluginsWs.send(JSON.stringify({ type: 'webstats-remote-request' }));
+        } else {
+            console.warn('[WebStats] WebSocket not open, cannot fetch remote data');
         }
         return Promise.resolve();
     }

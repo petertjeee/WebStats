@@ -668,6 +668,7 @@ function initWebSocket() {
                     // Remote server data: fetch from configured servers (avoids CORS)
                     if (data.type === 'webstats-remote-request') {
                         const servers = config.remoteServers;
+                        logMsg('Remote server request: ' + (servers ? servers.length : 0) + ' servers configured');
                         if (!servers || !Array.isArray(servers) || servers.length === 0) {
                             ws.send(JSON.stringify({ type: 'webstats-remote-data', value: {} }));
                         } else {
@@ -675,12 +676,21 @@ function initWebSocket() {
                             let pending = servers.length;
                             servers.forEach(server => {
                                 const url = server.url.replace(/\/$/, '') + '/js/plugins/WebStats/webstats-data.json';
+                                logMsg('Fetching remote: ' + url);
                                 fetchUrl(url, (err, body) => {
-                                    if (!err && body) {
-                                        try { results[server.name] = JSON.parse(body); } catch (e) { /* skip */ }
+                                    if (err) {
+                                        logMsg('Remote fetch error (' + server.name + '): ' + err.message);
+                                    } else if (body) {
+                                        try {
+                                            results[server.name] = JSON.parse(body);
+                                            logMsg('Remote fetch success: ' + server.name);
+                                        } catch (e) {
+                                            logMsg('Remote parse error (' + server.name + '): ' + e.message);
+                                        }
                                     }
                                     pending--;
                                     if (pending <= 0) {
+                                        logMsg('Remote data complete, sending ' + Object.keys(results).length + ' results');
                                         ws.send(JSON.stringify({ type: 'webstats-remote-data', value: results }));
                                     }
                                 });
