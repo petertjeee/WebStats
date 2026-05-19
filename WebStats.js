@@ -260,15 +260,29 @@ function removeWebAccessible() {
 }
 
 // --- Parse timestamp from log line ---
-// fm-dx-webserver always uses DD/MM/YYYY HH:MM format (from toLocaleDateString + toLocaleTimeString)
+// fm-dx-webserver format depends on system locale: DD/MM/YYYY or MM/DD/YYYY
 function parseTimestamp(tsString) {
     const match = tsString.match(/(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})\s+(\d{1,2}):(\d{2})/);
-    if (match) {
-        const [, day, month, year, hour, minute] = match;
-        const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute));
-        if (!isNaN(d.getTime())) return d;
-    }
+    if (!match) return new Date();
 
+    let [, d1, d2, year, hour, minute] = match.map(x => parseInt(x));
+    // d1 and d2 could be (day, month) or (month, day) depending on locale
+    // Try both interpretations and pick the valid one
+    const tryDate = (day, month) => {
+        if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+        const d = new Date(year, month - 1, day, hour, minute);
+        return isNaN(d.getTime()) ? null : d;
+    };
+    // Try DD/MM first (most common), then MM/DD
+    const date1 = tryDate(d1, d2);
+    const date2 = tryDate(d2, d1);
+    // If only one is valid, use it
+    if (date1 && !date2) return date1;
+    if (date2 && !date1) return date2;
+    // If both valid, prefer DD/MM (day > 12 is unambiguous)
+    if (date1 && date2) {
+        return d1 > 12 ? date1 : date2;  // If d1 > 12, it must be day, so DD/MM
+    }
     return new Date();
 }
 
