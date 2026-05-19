@@ -43,6 +43,10 @@ Visitor statistics plugin that monitors `serverlog.txt` and provides a dashboard
 4. Activate the WebStats plugin in the server settings
 5. Reload the browser
 
+## First-time Setup Note
+
+> **Important:** When you first enable the plugin, the `webstats-data.json` file does not exist yet. The plugin processes `serverlog.txt` on a timer (default: every 60 seconds). If you open WebStats immediately after activation, you may see a **404 Not Found** error. This is normal — simply wait up to 10 minutes for the first processing cycle to complete, then refresh the page.
+
 ## Configuration
 
 Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
