@@ -72,11 +72,10 @@
         if (document.querySelector('.admin-quick-dashboard #dashboard-lock-admin')) {
             isAdmin = true;
             console.log('[WebStats] Admin mode detected');
-            connectAdminWebSocket();
         }
     }
 
-    function connectAdminWebSocket() {
+    function connectWebSocket() {
         try {
             const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
             pluginsWs = new WebSocket(`${wsProtocol}//${location.host}/data_plugins`);
@@ -120,11 +119,20 @@
                 } catch (e) {}
             };
 
+            pluginsWs.onopen = () => {
+                console.log('[WebStats] WebSocket connected');
+                // If modal is already open, request remote data now
+                if (modalOpen) {
+                    fetchRemoteServers();
+                    if (isAdmin) requestAdminData();
+                }
+            };
+
             pluginsWs.onclose = () => {
                 pluginsWs = null;
                 // Reconnect after 10s
                 setTimeout(() => {
-                    if (isAdmin) connectAdminWebSocket();
+                    connectWebSocket();
                 }, 10000);
             };
 
@@ -1697,10 +1705,13 @@
         if (pluginsWs && pluginsWs.readyState === WebSocket.OPEN) {
             console.log('[WebStats] Requesting remote server data');
             pluginsWs.send(JSON.stringify({ type: 'webstats-remote-request' }));
+        } else if (pluginsWs && pluginsWs.readyState === WebSocket.CONNECTING) {
+            // Wait for connection then retry
+            console.log('[WebStats] WebSocket connecting, will retry in 500ms');
+            setTimeout(fetchRemoteServers, 500);
         } else {
-            console.warn('[WebStats] WebSocket not open, cannot fetch remote data');
+            console.warn('[WebStats] WebSocket not available, cannot fetch remote data');
         }
-        return Promise.resolve();
     }
 
     function renderMultiServer(container) {
@@ -2107,6 +2118,13 @@
         injectStyles();
         createModal();
         createButton();
+
+        // Always connect WebSocket (needed for remote server data)
+        try {
+            connectWebSocket();
+        } catch (e) {
+            console.warn('[WebStats] WebSocket connection failed:', e.message);
+        }
 
         try {
             await loadChartJS();
