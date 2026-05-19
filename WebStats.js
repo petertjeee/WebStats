@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.0.0)          ///
+///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.0.1)          ///
 ///                                                         ///
 ///  Visitor statistics from serverlog.txt                   ///
 ///                                                         ///
@@ -14,7 +14,7 @@ const https = require('https');
 // Plugin configuration
 var pluginConfig = {
     name: 'WebStats',
-    version: '2.0.0',
+    version: '2.0.1',
     author: 'Peter',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
