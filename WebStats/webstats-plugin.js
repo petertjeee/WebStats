@@ -136,7 +136,9 @@
                 }, 10000);
             };
 
-            pluginsWs.onerror = () => {};
+            pluginsWs.onerror = (err) => {
+                console.warn('[WebStats] WebSocket error:', err);
+            };
         } catch (e) {
             console.warn('[WebStats] Could not connect admin WebSocket');
         }
