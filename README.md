@@ -2,6 +2,10 @@
 
 Visitor statistics plugin that monitors `serverlog.txt` and provides a dashboard with visitor analytics.
 
+## Project Status / Experiment
+
+This repository is an active experiment in AI-assisted software development.
+
 ## Features
 
 - **Automatic log monitoring** — parses new connections from serverlog.txt (configurable interval)
