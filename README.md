@@ -39,9 +39,14 @@ Visitor statistics plugin that monitors `serverlog.txt` and provides a dashboard
    fm-dx-webserver/plugins/WebStats/webstats-plugin.js
    fm-dx-webserver/plugins/WebStats/webstats-config.json
    ```
-3. Restart the fm-dx-webserver
-4. Activate the WebStats plugin in the server settings
-5. Reload the browser
+3. Ensure the plugin files are owned by the user running fm-dx-webserver (on Linux):
+   ```
+   sudo chown -R $(whoami):$(whoami) WebStats*
+   ```
+   Replace `$(whoami)` with the actual user that runs the Node.js process if different.
+4. Restart the fm-dx-webserver
+5. Activate the WebStats plugin in the server settings
+6. Reload the browser
 
 ## First-time Setup Note
 
