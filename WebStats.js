@@ -8,6 +8,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const http = require('http');
+const https = require('https');
 
 // Plugin configuration
 var pluginConfig = {
@@ -456,6 +458,25 @@ function triggerPeakAlert(concurrent, dateKey, hour) {
     }
 }
 
+// --- Fetch a URL (for remote server data) ---
+function fetchUrl(url, callback, redirects) {
+    if (!redirects) redirects = 0;
+    if (redirects > 3) return callback(new Error('Too many redirects'));
+    const lib = url.startsWith('https') ? https : http;
+    lib.get(url, { timeout: 5000 }, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+            return fetchUrl(res.headers.location, callback, redirects + 1);
+        }
+        if (res.statusCode !== 200) {
+            res.resume();
+            return callback(new Error('HTTP ' + res.statusCode));
+        }
+        let body = '';
+        res.on('data', chunk => body += chunk);
+        res.on('end', () => callback(null, body));
+    }).on('error', callback);
+}
+
 // --- Read and process new lines from the log file ---
 // Note: fm-dx-webserver truncates serverlog.txt to 5000 lines every 60s,
 // rewriting the entire file. Byte offsets are unreliable, so we use
@@ -643,6 +664,28 @@ function initWebSocket() {
                                 version: pluginConfig.version
                             }
                         }));
+                    }
+                    // Remote server data: fetch from configured servers (avoids CORS)
+                    if (data.type === 'webstats-remote-request') {
+                        const servers = config.remoteServers;
+                        if (!servers || !Array.isArray(servers) || servers.length === 0) {
+                            ws.send(JSON.stringify({ type: 'webstats-remote-data', value: {} }));
+                        } else {
+                            const results = {};
+                            let pending = servers.length;
+                            servers.forEach(server => {
+                                const url = server.url.replace(/\/$/, '') + '/js/plugins/WebStats/webstats-data.json';
+                                fetchUrl(url, (err, body) => {
+                                    if (!err && body) {
+                                        try { results[server.name] = JSON.parse(body); } catch (e) { /* skip */ }
+                                    }
+                                    pending--;
+                                    if (pending <= 0) {
+                                        ws.send(JSON.stringify({ type: 'webstats-remote-data', value: results }));
+                                    }
+                                });
+                            });
+                        }
                     }
                     // Restore: load data from admin upload
                     if (data.type === 'webstats-restore' && isAdmin && data.value) {

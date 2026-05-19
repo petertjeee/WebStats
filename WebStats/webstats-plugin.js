@@ -100,6 +100,11 @@
                         const blob = new Blob([JSON.stringify(data.value, null, 2)], { type: 'application/json' });
                         downloadBlob(blob, `webstats-backup-${getDateKey(new Date())}.json`);
                     }
+                    if (data.type === 'webstats-remote-data' && data.value) {
+                        remoteServersData = data.value;
+                        const msContainer = document.getElementById('ws-multi-server');
+                        if (msContainer) renderMultiServer(msContainer);
+                    }
                     if (data.type === 'webstats-restore-result' && data.value) {
                         if (data.value.success) {
                             alert('Backup restored successfully!');
@@ -850,12 +855,10 @@
         // Location format: "City, Region, CC" — extract last 2-letter country code
         const parts = locationStr.split(',');
         const lastPart = (parts[parts.length - 1] || '').trim().toUpperCase();
-        if (lastPart.length !== 2) return '';
-        // Convert country code to flag emoji using regional indicator symbols
-        const flag = String.fromCodePoint(
-            ...lastPart.split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
-        );
-        return flag;
+        if (lastPart.length !== 2 || !/^[A-Z]{2}$/.test(lastPart)) return '';
+        // Use flagcdn.com SVG for cross-platform support (Windows doesn't render flag emoji)
+        const cc = lastPart.toLowerCase();
+        return `<img src="https://flagcdn.com/16x12/${cc}.png" width="16" height="12" alt="${lastPart}" style="vertical-align:middle;margin-right:3px" onerror="this.style.display='none'">`;
     }
 
     // ========== Export Helpers ==========
@@ -1197,8 +1200,8 @@
         overlay.classList.add('active');
         modalOpen = true;
         selectedDay = null;
-        fetchRemoteServers().then(() => loadAndRender());
         loadAndRender();
+        fetchRemoteServers();
         requestAdminData();
         refreshTimer = setInterval(() => {
             loadAndRender();
@@ -1637,11 +1640,11 @@
             <div class="ws-geo-bars">`;
 
         top.forEach(([cc, count]) => {
-            const flag = String.fromCodePoint(...cc.split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+            const flagImg = `<img src="https://flagcdn.com/16x12/${cc.toLowerCase()}.png" width="16" height="12" alt="${cc}" style="vertical-align:middle" onerror="this.style.display='none'">`;
             const pct = Math.round((count / maxCount) * 100);
             const tc = getThemeColorRgb('--color-main-bright');
             html += `<div class="ws-geo-bar-row">
-                <span class="ws-geo-label">${flag} ${cc}</span>
+                <span class="ws-geo-label">${flagImg} ${cc}</span>
                 <div class="ws-geo-bar-track">
                     <div class="ws-geo-bar-fill" style="width:${pct}%;background:rgba(${tc.r},${tc.g},${tc.b},0.7)"></div>
                 </div>
@@ -1685,21 +1688,12 @@
     }
 
     // ========== Multi-Server Dashboard ==========
-    async function fetchRemoteServers() {
-        const servers = pluginConfig.remoteServers;
-        if (!servers || !Array.isArray(servers) || servers.length === 0) return;
-
-        for (const server of servers) {
-            try {
-                const url = server.url.replace(/\/$/, '') + '/js/plugins/WebStats/webstats-data.json?t=' + Date.now();
-                const res = await fetch(url, { mode: 'cors' });
-                if (res.ok) {
-                    remoteServersData[server.name] = await res.json();
-                }
-            } catch (e) {
-                console.warn(`[WebStats] Could not fetch from ${server.name}: ${e.message}`);
-            }
+    function fetchRemoteServers() {
+        // Request remote server data via WebSocket (backend fetches to avoid CORS)
+        if (pluginsWs && pluginsWs.readyState === WebSocket.OPEN) {
+            pluginsWs.send(JSON.stringify({ type: 'webstats-remote-request' }));
         }
+        return Promise.resolve();
     }
 
     function renderMultiServer(container) {
