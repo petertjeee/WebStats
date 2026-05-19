@@ -126,6 +126,24 @@ The plugin monitors `serverlog.txt` for lines matching the pattern:
 
 It uses timestamp-based deduplication to track which lines have already been processed, so it handles fm-dx-webserver's log truncation (5000 line limit) correctly without double-counting. Localhost connections (127.0.0.1) are ignored.
 
+## Troubleshooting
+
+### Unknown locations showing "Unknown" or missing country flags
+
+If visitor locations show as "Unknown" instead of city/country names, you need to install the **geoip-lite** package for your fm-dx-webserver:
+
+```bash
+cd /path/to/fm-dx-webserver
+npm install geoip-lite
+systemctl restart fm-dx-webserver  # or restart manually
+```
+
+The geoip-lite package resolves IP addresses to geographic locations. Without it, the server cannot determine visitor locations, and the WebStats dashboard will show "Unknown" for all entries.
+
+### 404 Not Found on first use
+
+See the [First-time Setup Note](#first-time-setup-note) above.
+
 ## Version History
 
 ### 2.0.0
