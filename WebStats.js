@@ -15,7 +15,7 @@ const https = require('https');
 var pluginConfig = {
     name: 'WebStats',
     version: '2.0.1',
-    author: 'Peter',
+    author: 'petertjeee',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
 
