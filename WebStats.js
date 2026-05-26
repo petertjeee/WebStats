@@ -40,7 +40,8 @@ let config = {
     adminOnly: false,
     ignoreIPs: [],
     peakAlertThreshold: 0,
-    webhookUrl: ''
+    webhookUrl: '',
+    debug: false
 };
 
 // --- Load configuration ---
@@ -261,11 +262,23 @@ function removeWebAccessible() {
 
 // --- Parse timestamp from log line ---
 // fm-dx-webserver format depends on system locale: DD/MM/YYYY or MM/DD/YYYY
+// Also supports 12-hour format with AM/PM: [5/23/2026 04:32 PM]
 function parseTimestamp(tsString) {
-    const match = tsString.match(/(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})\s+(\d{1,2}):(\d{2})/);
+    // Match date and time, optionally with AM/PM
+    const match = tsString.match(/(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
     if (!match) return new Date();
 
-    let [, d1, d2, year, hour, minute] = match.map(x => parseInt(x));
+    let [, d1, d2, year, hour, minute, ampm] = match;
+    [d1, d2, year, hour, minute] = [d1, d2, year, hour, minute].map(x => parseInt(x));
+
+    // Convert 12-hour to 24-hour format if AM/PM present
+    if (ampm) {
+        const isPM = ampm.toUpperCase() === 'PM';
+        const isAM = ampm.toUpperCase() === 'AM';
+        if (isPM && hour !== 12) hour += 12;      // 1 PM -> 13, 12 PM stays 12
+        if (isAM && hour === 12) hour = 0;        // 12 AM -> 0 (midnight)
+    }
+
     // d1 and d2 could be (day, month) or (month, day) depending on locale
     // Try both interpretations and pick the valid one
     const tryDate = (day, month) => {
@@ -569,7 +582,9 @@ function processLogFile() {
             statsData._last_timestamp = latestEpoch;
         }
 
-        logMsg('Log poll: ' + totalLines + ' lines, ' + skipped + ' skipped, ' + processed + ' new, lastTs=' + (lastEpoch ? new Date(lastEpoch).toISOString() : 'none'));
+        if (config.debug) {
+            logMsg('Log poll: ' + totalLines + ' lines, ' + skipped + ' skipped, ' + processed + ' new, lastTs=' + (lastEpoch ? new Date(lastEpoch).toISOString() : 'none'));
+        }
 
         if (processed > 0) {
             saveData();

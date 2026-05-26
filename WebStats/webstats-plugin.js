@@ -1193,7 +1193,7 @@
                     <div class="ws-loading">Loading...</div>
                 </div>
                 <div class="ws-footer">
-                    WebStats Plugin v${PLUGIN_VERSION}
+                    <a href="https://github.com/${pluginConfig.githubRepo || 'petertjeee/WebStats'}" target="_blank" style="color:var(--color-3);text-decoration:none">WebStats Plugin v${PLUGIN_VERSION}</a>
                     <span id="ws-update-indicator"></span>
                 </div>
             </div>

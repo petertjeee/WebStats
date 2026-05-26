@@ -73,7 +73,8 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
     "githubRepo": "YOUR_GITHUB_USERNAME/WebStats",
     "remoteServers": [
         { "name": "Server 2", "url": "https://other-server.example.com" }
-    ]
+    ],
+    "debug": false
 }
 ```
 
@@ -89,6 +90,7 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
 | `updateCheck` | `true` | Check GitHub for plugin updates (once per day) |
 | `githubRepo` | `""` | GitHub repository path for update checks (e.g. `user/WebStats`) |
 | `remoteServers` | `[]` | Array of `{name, url}` objects for multi-server comparison |
+| `debug` | `false` | Enable verbose logging (log poll stats every cycle) |
 
 ## Usage
 

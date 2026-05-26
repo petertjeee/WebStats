@@ -8,5 +8,6 @@
     "webhookUrl": "",
     "updateCheck": true,
     "githubRepo": "petertjeee/WebStats",
-    "remoteServers": []
+    "remoteServers": [],
+    "debug": false
 }
