@@ -67,7 +67,8 @@ function loadConfig() {
 
 // --- Regex to match connection log lines ---
 // [timestamp] [INFO] Web client connected (IP) [N] Location: Place (ISP)
-const CONNECTION_REGEX = /^\[([^\]]+)\]\s+\[INFO\]\s+Web client connected \(([^)]+)\)\s+\[(\d+)\]\s+Location:\s+(.+?)\s+\(([^)]+)\)\s*$/;
+// ISP in parentheses is optional — some servers omit it
+const CONNECTION_REGEX = /^\[([^\]]+)\]\s+\[INFO\]\s+Web client connected \(([^)]+)\)\s+\[(\d+)\]\s+Location:\s+(.+?)(?:\s+\(([^)]+)\))?\s*$/;
 
 // --- Regex to match disconnection log lines ---
 // [timestamp] [INFO] Web client disconnected (IP) [N]
