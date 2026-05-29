@@ -1,3 +1,4 @@
 .DS_Store
 WebStats/webstats-data.json
 WebStats/webstats-admin.json
+*.txt

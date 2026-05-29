@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.1)          ///
+///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.2)          ///
 ///                                                         ///
 ///  Visitor statistics from serverlog.txt                   ///
 ///                                                         ///
@@ -14,7 +14,7 @@ const https = require('https');
 // Plugin configuration
 var pluginConfig = {
     name: 'WebStats',
-    version: '2.1.1',
+    version: '2.1.2',
     author: 'petertjeee',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
@@ -264,7 +264,16 @@ function removeWebAccessible() {
 // --- Parse timestamp from log line ---
 // fm-dx-webserver format depends on system locale: DD/MM/YYYY or MM/DD/YYYY
 // Also supports 12-hour format with AM/PM: [5/23/2026 04:32 PM]
+// Also supports ISO-style: YYYY-MM-DD HH:MM
 function parseTimestamp(tsString) {
+    // Try ISO format first: YYYY-MM-DD HH:MM
+    const isoMatch = tsString.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})\s+(\d{1,2}):(\d{2})/);
+    if (isoMatch) {
+        const [, year, month, day, hour, minute] = isoMatch.map(x => parseInt(x));
+        const d = new Date(year, month - 1, day, hour, minute);
+        if (!isNaN(d.getTime())) return d;
+    }
+
     // Match date and time, optionally with AM/PM
     const match = tsString.match(/(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-](\d{4})\s+(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)?/);
     if (!match) return new Date();
