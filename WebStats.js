@@ -61,7 +61,12 @@ function loadConfig() {
             logMsg('No webstats-config.json found, using defaults');
         }
     } catch (err) {
-        logMsg('Error loading config: ' + err.message);
+        if (err instanceof SyntaxError) {
+            logMsg('ERROR: webstats-config.json contains invalid JSON: ' + err.message);
+            logMsg('ERROR: Fix the JSON syntax error and restart. Using defaults until then (ignoreIPs and remoteServers will be ignored!)');
+        } else {
+            logMsg('Error loading config: ' + err.message);
+        }
     }
 }
 

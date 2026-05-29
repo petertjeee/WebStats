@@ -66,17 +66,26 @@ Edit `plugins/WebStats/webstats-config.json` to customize the plugin:
     "dataRetentionMonths": 12,
     "adminRetentionDays": 7,
     "adminOnly": false,
-    "ignoreIPs": ["192.168.1.100"],
+    "ignoreIPs": ["192.168.1.100", "10.0.0.1"],
     "peakAlertThreshold": 10,
     "webhookUrl": "https://hooks.slack.com/services/...",
     "updateCheck": true,
     "githubRepo": "YOUR_GITHUB_USERNAME/WebStats",
     "remoteServers": [
-        { "name": "Server 2", "url": "https://other-server.example.com" }
+        { "name": "Server 2", "url": "https://server2.example.com" },
+        { "name": "Server 3", "url": "https://server3.example.com" },
+        { "name": "Server 4", "url": "https://server4.example.com" }
     ],
     "debug": false
 }
 ```
+
+> **Important:** This file must be valid JSON. Common mistakes that will break the config (causing `ignoreIPs` and `remoteServers` to be ignored):
+> - Missing commas between entries in arrays or objects
+> - Trailing commas after the last entry
+> - Unquoted keys or values
+>
+> If the config fails to load, the plugin will log an error message in `serverlog.txt` starting with `[WebStats] ERROR: webstats-config.json contains invalid JSON`. Use a JSON validator (e.g. [jsonlint.com](https://jsonlint.com)) to find the problem.
 
 | Option | Default | Description |
 |--------|---------|-------------|
