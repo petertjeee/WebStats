@@ -1,17 +1,25 @@
-## Bug Fix
+## What's New in v2.2.0
 
-**Fixed missing visitors for dates 1–12 of each month**
+### Robust date format detection
 
-When both day and month are ≤ 12 (e.g., June 1st = `01/06/2026`), both DD/MM and MM/DD interpretations appear "valid" to the parser. The previous logic incorrectly preferred MM/DD (US format) in these ambiguous cases, causing visitors from June 1–12 to be recorded as January 6–12 instead.
+This release overhauls how timestamps are parsed to fix visitors going missing or being recorded on the wrong date, especially around the 1st–12th of each month.
 
-Changed the heuristic to prefer DD/MM (more common internationally):
-- If d2 > 12, use MM/DD (d2 must be the day)
-- Otherwise, use DD/MM (the more common format)
+fm-dx-webserver writes log timestamps using the operating system's locale (via `toLocaleDateString()`), so the day/month order varies per server (DD/MM, MM/DD, or YYYY-MM-DD). A single line like `01/06/2026` is ambiguous on its own.
 
-## Who Is Affected
+WebStats now resolves this deterministically:
 
-Any server using DD/MM/YYYY format (day first) will have been missing visitors from the 1st–12th day of each month. These visitors were incorrectly recorded in the wrong month (e.g., June 1st → January 6th).
+- **OS locale detection** — since the plugin runs on the same machine as fm-dx-webserver, it asks the OS directly which date order it uses (`Intl.DateTimeFormat`), matching exactly how the log was written. This works for all locales, not a fixed list.
+- **Content-based override** — if the log contains an unambiguous line (a day greater than 12), the actual data overrides the OS guess. This protects against logs copied from a machine with a different locale.
+
+### Bug Fixes
+
+- Fixed visitors from days 1–12 of a month being misparsed into the wrong month (e.g. June 1st recorded as January 6th, or silently skipped entirely).
+- ISO timestamps (`YYYY-MM-DD HH:MM`) now tolerate single-digit month/day and are range-validated.
+
+### Other
+
+- Debug log now reports the detected date format (`dateFormat=DMY`).
 
 ## Upgrade Notes
 
-Delete `webstats-data.json` and restart to reprocess the log with the corrected parser. This will restore the missing visitors from dates 1–12 of each month.
+If you have noticed missing visitors or visitors on the wrong dates, delete `webstats-data.json` and restart the server to reprocess the log with the corrected parser.

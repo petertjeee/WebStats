@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.4)          ///
+///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.2.0)          ///
 ///                                                         ///
 ///  Visitor statistics from serverlog.txt                   ///
 ///                                                         ///
@@ -14,7 +14,7 @@ const https = require('https');
 // Plugin configuration
 var pluginConfig = {
     name: 'WebStats',
-    version: '2.1.4',
+    version: '2.2.0',
     author: 'petertjeee',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
@@ -266,17 +266,67 @@ function removeWebAccessible() {
     }
 }
 
+// Date format hint used to resolve ambiguous timestamps (e.g. 01/06/2026).
+// 'DMY' = day first (DD/MM/YYYY), 'MDY' = month first (MM/DD/YYYY).
+//
+// fm-dx-webserver writes timestamps with `new Date().toLocaleDateString()`
+// (no locale argument), so the day/month order is dictated entirely by the
+// OS locale of the machine running the server. Because this plugin runs on
+// that same machine, we can ask the OS directly what order it uses — this is
+// deterministic and matches exactly how the log was written.
+//
+// As a safety net we also scan the log content: if a line is unambiguous
+// (a component > 12), the actual data overrides the OS guess (e.g. when a
+// log was copied from a machine with a different locale).
+let dateFormatHint = 'DMY';
+
+// --- Detect day/month order from the OS locale ---
+// Uses the same default-locale mechanism as fm-dx-webserver's
+// toLocaleDateString(), reading the order of the day/month parts.
+function detectOSDateFormat() {
+    try {
+        const parts = new Intl.DateTimeFormat().formatToParts(new Date(2026, 0, 2));
+        const order = parts
+            .filter(p => p.type === 'day' || p.type === 'month')
+            .map(p => p.type);
+        if (order.length >= 2) {
+            dateFormatHint = order[0] === 'day' ? 'DMY' : 'MDY';
+        }
+    } catch (e) {
+        // Intl unavailable — keep current hint
+    }
+}
+
+// --- Override with hard evidence from the log file ---
+// Scans every timestamp; if any line has a component > 12 it disambiguates
+// the format for the entire file, overriding the OS-based default.
+function detectDateFormat(content) {
+    const lines = content.split('\n');
+    const re = /^\[(\d{1,2})[\.\/\-](\d{1,2})[\.\/\-]\d{4}/;
+    for (const line of lines) {
+        const m = line.match(re);
+        if (!m) continue;
+        const d1 = parseInt(m[1]);
+        const d2 = parseInt(m[2]);
+        if (d1 > 12 && d2 <= 12) { dateFormatHint = 'DMY'; return; }  // first is day
+        if (d2 > 12 && d1 <= 12) { dateFormatHint = 'MDY'; return; }  // second is day
+    }
+    // No disambiguating line found — keep the OS-detected default
+}
+
 // --- Parse timestamp from log line ---
 // fm-dx-webserver format depends on system locale: DD/MM/YYYY or MM/DD/YYYY
 // Also supports 12-hour format with AM/PM: [5/23/2026 04:32 PM]
 // Also supports ISO-style: YYYY-MM-DD HH:MM
 function parseTimestamp(tsString) {
-    // Try ISO format first: YYYY-MM-DD HH:MM
-    const isoMatch = tsString.match(/(\d{4})[\/\-](\d{2})[\/\-](\d{2})\s+(\d{1,2}):(\d{2})/);
+    // Try ISO format first: YYYY-MM-DD HH:MM (also tolerates single-digit M/D)
+    const isoMatch = tsString.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\s+(\d{1,2}):(\d{2})/);
     if (isoMatch) {
         const [, year, month, day, hour, minute] = isoMatch.map(x => parseInt(x));
-        const d = new Date(year, month - 1, day, hour, minute);
-        if (!isNaN(d.getTime())) return d;
+        if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+            const d = new Date(year, month - 1, day, hour, minute);
+            if (!isNaN(d.getTime())) return d;
+        }
     }
 
     // Match date and time, optionally with AM/PM
@@ -301,16 +351,14 @@ function parseTimestamp(tsString) {
         const d = new Date(year, month - 1, day, hour, minute);
         return isNaN(d.getTime()) ? null : d;
     };
-    // Try DD/MM first (most common), then MM/DD
-    const date1 = tryDate(d1, d2);
-    const date2 = tryDate(d2, d1);
-    // If only one is valid, use it
-    if (date1 && !date2) return date1;
-    if (date2 && !date1) return date2;
-    // If both valid, prefer DD/MM (more common internationally)
-    // Only use MM/DD if d2 > 12 (then d2 must be day, so MM/DD)
-    if (date1 && date2) {
-        return d2 > 12 ? date2 : date1;  // If d2 > 12, it must be day, so MM/DD
+    const dateDMY = tryDate(d1, d2);  // d1=day, d2=month
+    const dateMDY = tryDate(d2, d1);  // d2=day, d1=month
+    // If only one interpretation is valid, the format is unambiguous for this line
+    if (dateDMY && !dateMDY) return dateDMY;
+    if (dateMDY && !dateDMY) return dateMDY;
+    // Both valid (ambiguous line) — use the format detected for the whole file
+    if (dateDMY && dateMDY) {
+        return dateFormatHint === 'MDY' ? dateMDY : dateDMY;
     }
     return new Date();
 }
@@ -532,6 +580,11 @@ function processLogFile() {
         }
 
         const content = fs.readFileSync(LOG_FILE, 'utf8');
+        // Determine day/month order before parsing: first from the OS locale
+        // (matching how fm-dx-webserver wrote the log), then override with any
+        // unambiguous evidence found in the log content itself.
+        detectOSDateFormat();
+        detectDateFormat(content);
         const lines = content.split('\n');
         // _last_timestamp is stored as epoch ms for reliable comparison
         const lastEpoch = statsData._last_timestamp || 0;
@@ -599,7 +652,7 @@ function processLogFile() {
         }
 
         if (config.debug) {
-            logMsg('Log poll: ' + totalLines + ' lines, ' + skipped + ' skipped, ' + processed + ' new, lastTs=' + (lastEpoch ? new Date(lastEpoch).toISOString() : 'none'));
+            logMsg('Log poll: ' + totalLines + ' lines, ' + skipped + ' skipped, ' + processed + ' new, dateFormat=' + dateFormatHint + ', lastTs=' + (lastEpoch ? new Date(lastEpoch).toISOString() : 'none'));
         }
 
         if (processed > 0) {
