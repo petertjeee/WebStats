@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.3)          ///
+///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.4)          ///
 ///                                                         ///
 ///  Visitor statistics from serverlog.txt                   ///
 ///                                                         ///
@@ -14,7 +14,7 @@ const https = require('https');
 // Plugin configuration
 var pluginConfig = {
     name: 'WebStats',
-    version: '2.1.3',
+    version: '2.1.4',
     author: 'petertjeee',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
@@ -307,9 +307,10 @@ function parseTimestamp(tsString) {
     // If only one is valid, use it
     if (date1 && !date2) return date1;
     if (date2 && !date1) return date2;
-    // If both valid, prefer DD/MM (day > 12 is unambiguous)
+    // If both valid, prefer DD/MM (more common internationally)
+    // Only use MM/DD if d2 > 12 (then d2 must be day, so MM/DD)
     if (date1 && date2) {
-        return d1 > 12 ? date1 : date2;  // If d1 > 12, it must be day, so DD/MM
+        return d2 > 12 ? date2 : date1;  // If d2 > 12, it must be day, so MM/DD
     }
     return new Date();
 }
