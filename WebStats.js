@@ -1,6 +1,6 @@
 ///////////////////////////////////////////////////////////////
 ///                                                         ///
-///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.2)          ///
+///  WEBSTATS PLUGIN FOR FM-DX-WEBSERVER (V2.1.3)          ///
 ///                                                         ///
 ///  Visitor statistics from serverlog.txt                   ///
 ///                                                         ///
@@ -14,7 +14,7 @@ const https = require('https');
 // Plugin configuration
 var pluginConfig = {
     name: 'WebStats',
-    version: '2.1.2',
+    version: '2.1.3',
     author: 'petertjeee',
     frontEndPath: 'WebStats/webstats-plugin.js'
 };
@@ -411,7 +411,7 @@ function processLine(line) {
     day.locations[loc] = (day.locations[loc] || 0) + 1;
 
     // ISP
-    const ispName = isp.trim();
+    const ispName = isp ? isp.trim() : 'Unknown';
     day.isps[ispName] = (day.isps[ispName] || 0) + 1;
 
     // Peak concurrent alert
